@@ -40,6 +40,18 @@ struct PartState {
     /// Whether the loaded song addresses this part at all. A mixer lists these and hides the rest.
     bool present = false;
 
+    /// The MIDI channel this part listens on, zero-based -- **not** the slot it occupies.
+    ///
+    /// Parts are matched by receive channel rather than indexed by it: `dispatch_channel` walks the
+    /// list looking for a match, because GS can point several parts at one channel or detach one
+    /// from every channel. The two agree until something moves a part, and a patch bulk dump moves
+    /// parts by definition -- so a strip labelled with its slot then names a channel the file is
+    /// not addressing.
+    ///
+    /// -1 when no engine reported one, which is what a cleared snapshot holds. A strip falls back
+    /// to its slot rather than claiming every part is on channel 1.
+    int rxChannel = -1;
+
     /// Whether this part is sounding drums *now* -- not "is this the drum channel". GS can route
     /// any part to the drum path over SysEx and XG does it from bank select alone, so comparing the
     /// channel number to a configured drum channel mislabels both directions.
@@ -237,8 +249,12 @@ private:
     std::optional<smf::SongLoop> song_loop_;
     bool looping_ = false;
 
-    /// Which parts the loaded song addresses, as `port * 16 + channel`.
-    std::array<bool, TS_MAX_PARTS> used_parts_{};
+    /// Which *channel addresses* the loaded song sends on, as `port * 16 + channel`.
+    ///
+    /// Channels, not parts, and the distinction is the whole point: which part a channel reaches is
+    /// the engine's to answer and changes while the file plays, so this holds the half that is a
+    /// property of the file and `capture` asks the engine for the other half.
+    std::array<bool, TS_MAX_PARTS> used_channels_{};
 
     TSEngineSettings settings_ = TSEngineSettingsDefault();
     ChannelMask channels_;

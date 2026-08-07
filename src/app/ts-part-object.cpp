@@ -11,6 +11,10 @@ struct _TsPart {
 
     int index;
 
+    /// The channel the part listens on, which is what the strip is labelled with. Starts at the
+    /// slot's own and follows the engine from there.
+    int channel;
+
     char* label;
     char* name;
     char* tags;
@@ -105,25 +109,42 @@ static void ts_part_init(TsPart* self)
     self->address = g_strdup("");
 }
 
+namespace {
+
+/// Port letter and a 1-based channel, the way a mixer labels them: A1..A16, B1..B16, and so on up
+/// to D16 when the engine is running four ports.
+///
+/// The port comes from the slot, because that is what a port *is* -- sixteen slots of one. The
+/// channel does not: it is the one the part listens on, and the two part company as soon as
+/// anything moves a part.
+void format_address(int port, int channel, char** label, char** spelled)
+{
+    *label = g_strdup_printf("%c%d", 'A' + port, channel + 1);
+    *spelled = g_strdup_printf("Port %c, channel %d", 'A' + port, channel + 1);
+}
+
+} // namespace
+
 TsPart* ts_part_new(int index)
 {
     auto* self = TS_PART(g_object_new(TS_TYPE_PART, nullptr));
     self->index = index;
 
-    // Port letter and a 1-based channel, the way a mixer labels them: A1..A16, B1..B16, and so on
-    // up to D16 when the engine is running four ports.
-    const int port = index / ts::Sequence::channel_count;
-    const int channel = index % ts::Sequence::channel_count;
-    g_free(self->label);
-    self->label = g_strdup_printf("%c%d", 'A' + port, channel + 1);
+    // The slot's own channel, until an engine says otherwise. At power-on the two agree, so this is
+    // the right thing to show before a file has been loaded rather than a placeholder.
+    self->channel = index % ts::Sequence::channel_count;
 
+    g_free(self->label);
     g_free(self->address);
-    self->address = g_strdup_printf("Port %c, channel %d", 'A' + port, channel + 1);
+    format_address(index / ts::Sequence::channel_count, self->channel, &self->label,
+                   &self->address);
 
     return self;
 }
 
 int ts_part_get_index(TsPart* self) { return self->index; }
+int ts_part_get_port(TsPart* self) { return self->index / ts::Sequence::channel_count; }
+int ts_part_get_channel(TsPart* self) { return self->channel; }
 const char* ts_part_get_detail(TsPart* self) { return self->detail; }
 const char* ts_part_get_address(TsPart* self) { return self->address; }
 gboolean ts_part_get_present(TsPart* self) { return self->present; }
@@ -215,6 +236,26 @@ std::string detail_for(const ts::host::PartState& state)
 
 void ts_part_update(TsPart* self, const ts::host::PartState& state, gboolean dimmed)
 {
+    // The channel the part *hears*, which is not its slot. A cleared snapshot reports none, and
+    // then the slot's own is the honest answer rather than everything claiming channel 1.
+    const int channel =
+        state.rxChannel >= 0 ? state.rxChannel : self->index % ts::Sequence::channel_count;
+
+    if (channel != self->channel) {
+        self->channel = channel;
+
+        g_autofree char* label = nullptr;
+        g_autofree char* spelled = nullptr;
+        format_address(self->index / ts::Sequence::channel_count, channel, &label, &spelled);
+
+        set_string(self, self->label, label, PROP_LABEL);
+
+        // Not a property: the tooltip is answered on demand, so nothing is listening for this and
+        // announcing it would only make the row rewrite a string it does not read.
+        g_free(self->address);
+        self->address = g_steal_pointer(&spelled);
+    }
+
     set_string(self, self->name, state.name.empty() ? "—" : state.name.c_str(), PROP_NAME);
     set_string(self, self->tags, tags_for(state).c_str(), PROP_TAGS);
     set_string(self, self->detail, detail_for(state).c_str(), PROP_DETAIL);

@@ -17,6 +17,16 @@ TsPart* ts_part_new(int index);
 /// `port * 16 + channel`, which is how the engine addresses parts and how mute and solo are keyed.
 int ts_part_get_index(TsPart* self);
 
+/// The port this part's slot belongs to, counted from zero.
+int ts_part_get_port(TsPart* self);
+
+/// The channel the part *listens on*, counted from zero -- not the slot it occupies.
+///
+/// Parts are matched by receive channel rather than indexed by it, so a strip has to be labelled
+/// and ordered by this. The two agree until a bulk dump or a `40 1x 02` moves a part, and then a
+/// mixer built on the slot number is describing something the file is not addressing.
+int ts_part_get_channel(TsPart* self);
+
 /// What the part is actually playing, in the numbers a patch list is indexed by: the program and
 /// the bank select pair. The sounding instrument's *name* answers "what is this"; this answers
 /// "which entry is it", which is the question anyone comparing against a module's chart has.

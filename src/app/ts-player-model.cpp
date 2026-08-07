@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cstring>
 #include <exception>
 #include <string>
 #include <type_traits>
@@ -59,6 +60,10 @@ struct _TsPlayerModel {
     /// One bit per part, so a change in *which* parts the song addresses can be spotted without
     /// comparing sixty-four structs.
     guint64 presence;
+
+    /// The channel each part listens on, as of the last tick. Six bits per part is too much to
+    /// pack into a word the way presence is, and this is compared rather than read.
+    signed char routing[TS_MAX_PARTS];
 };
 
 G_DEFINE_FINAL_TYPE(TsPlayerModel, ts_player_model, G_TYPE_OBJECT)
@@ -83,7 +88,7 @@ enum {
 
 static GParamSpec* properties[N_PROPS];
 
-enum { SIGNAL_PRESENCE_CHANGED, N_SIGNALS };
+enum { SIGNAL_PRESENCE_CHANGED, SIGNAL_ROUTING_CHANGED, N_SIGNALS };
 static guint signals[N_SIGNALS];
 
 // -- Property plumbing -----------------------------------------------------------------------------
@@ -138,6 +143,7 @@ static void ts_player_model_refresh(TsPlayerModel* self)
                                         [](const auto& part) { return part.soloed; });
 
     guint64 presence = 0;
+    signed char routing[TS_MAX_PARTS] = {};
     const guint count = g_list_model_get_n_items(G_LIST_MODEL(self->parts));
     for (guint i = 0; i < count; ++i) {
         auto* part = TS_PART(g_list_model_get_item(G_LIST_MODEL(self->parts), i));
@@ -146,6 +152,7 @@ static void ts_player_model_refresh(TsPlayerModel* self)
         if (state.present) {
             presence |= guint64{1} << i;
         }
+        routing[i] = static_cast<signed char>(ts_part_get_channel(part));
         g_object_unref(part);
     }
 
@@ -155,6 +162,14 @@ static void ts_player_model_refresh(TsPlayerModel* self)
     if (presence != self->presence) {
         self->presence = presence;
         g_signal_emit(self, signals[SIGNAL_PRESENCE_CHANGED], 0);
+    }
+
+    // And the same again for the order, which a sorter watches no more closely than a filter
+    // watches the filtered property. A bulk dump can move a part without changing which parts are
+    // addressed at all, so this is a separate question from presence and asked separately.
+    if (memcmp(routing, self->routing, sizeof(routing)) != 0) {
+        memcpy(self->routing, routing, sizeof(routing));
+        g_signal_emit(self, signals[SIGNAL_ROUTING_CHANGED], 0);
     }
 
     // Reaching the end pauses rather than spinning at the tail, exactly as the Apple build does.
@@ -501,6 +516,10 @@ static void ts_player_model_class_init(TsPlayerModelClass* klass)
 
     signals[SIGNAL_PRESENCE_CHANGED] =
         g_signal_new("presence-changed", G_TYPE_FROM_CLASS(klass), G_SIGNAL_RUN_LAST, 0, nullptr,
+                     nullptr, nullptr, G_TYPE_NONE, 0);
+
+    signals[SIGNAL_ROUTING_CHANGED] =
+        g_signal_new("routing-changed", G_TYPE_FROM_CLASS(klass), G_SIGNAL_RUN_LAST, 0, nullptr,
                      nullptr, nullptr, G_TYPE_NONE, 0);
 }
 
