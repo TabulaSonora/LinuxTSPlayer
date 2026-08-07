@@ -123,7 +123,11 @@ static void ts_transport_sync(TsTransport* self)
                  nullptr);
 
     gtk_revealer_set_reveal_child(GTK_REVEALER(self->export_revealer), exporting);
-    gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(self->export_progress), export_progress);
+    if (exporting) {
+        // Pulsed from the same ten-times-a-second tick that drives everything else here.
+        gtk_progress_bar_pulse(GTK_PROGRESS_BAR(self->export_progress));
+    }
+    (void)export_progress;
 
     gtk_widget_set_visible(self->dropouts, underruns > 0);
     if (underruns > 0) {
@@ -310,22 +314,21 @@ static void ts_transport_init(TsTransport* self)
     // keeping it from ever reaching the narrow sizes the interface claims to support.
     GtkWidget* exporting = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
 
-    GtkWidget* exporting_label = gtk_label_new("Exporting");
+    GtkWidget* exporting_label = gtk_label_new("Exporting…");
     gtk_widget_add_css_class(exporting_label, "caption");
     gtk_widget_add_css_class(exporting_label, "dim-label");
     gtk_label_set_ellipsize(GTK_LABEL(exporting_label), PANGO_ELLIPSIZE_END);
     gtk_box_append(GTK_BOX(exporting), exporting_label);
 
+    // Indeterminate, and no cancel button beside it, because neither would be truthful. An export
+    // is one render call -- that is what makes its output match the reference -- so there is no
+    // fraction to report from inside it and no point at which it can be interrupted. A bar that sat
+    // at zero and jumped to full, or a Cancel that did nothing, would both be worse than saying
+    // plainly that something is in progress.
     self->export_progress = gtk_progress_bar_new();
     gtk_widget_set_hexpand(self->export_progress, TRUE);
     gtk_widget_set_valign(self->export_progress, GTK_ALIGN_CENTER);
     gtk_box_append(GTK_BOX(exporting), self->export_progress);
-
-    GtkWidget* cancel = gtk_button_new_from_icon_name("process-stop-symbolic");
-    gtk_widget_add_css_class(cancel, "flat");
-    gtk_widget_set_tooltip_text(cancel, "Stop exporting");
-    gtk_actionable_set_action_name(GTK_ACTIONABLE(cancel), "win.cancel-export");
-    gtk_box_append(GTK_BOX(exporting), cancel);
 
     self->export_revealer = gtk_revealer_new();
     gtk_revealer_set_child(GTK_REVEALER(self->export_revealer), exporting);

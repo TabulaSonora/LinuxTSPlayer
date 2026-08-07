@@ -462,14 +462,6 @@ static void on_export(GSimpleAction*, GVariant*, gpointer user_data)
 
 // -- Transport actions ---------------------------------------------------------------------------
 
-static void on_cancel_export(GSimpleAction*, GVariant*, gpointer user_data)
-{
-    auto* self = TS_WINDOW(user_data);
-    if (self->export_cancellable != nullptr) {
-        g_cancellable_cancel(self->export_cancellable);
-    }
-}
-
 static void on_play_pause(GSimpleAction*, GVariant*, gpointer user_data)
 {
     ts_player_model_toggle_playing(TS_WINDOW(user_data)->model);
@@ -535,7 +527,6 @@ static void ts_window_init(TsWindow* self)
         {"open", on_open, nullptr, nullptr, nullptr, {0, 0, 0}},
         {"import-rom", on_import_rom, nullptr, nullptr, nullptr, {0, 0, 0}},
         {"export", on_export, nullptr, nullptr, nullptr, {0, 0, 0}},
-        {"cancel-export", on_cancel_export, nullptr, nullptr, nullptr, {0, 0, 0}},
         {"play-pause", on_play_pause, nullptr, nullptr, nullptr, {0, 0, 0}},
         {"rewind", on_rewind, nullptr, nullptr, nullptr, {0, 0, 0}},
         {"panic", on_panic, nullptr, nullptr, nullptr, {0, 0, 0}},

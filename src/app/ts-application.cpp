@@ -79,8 +79,10 @@ static void on_about(GSimpleAction* action, GVariant* parameter, gpointer user_d
 
     // Not decoration: reverb and chorus coefficients compiled into the engine are Roland-derived,
     // and the upstream notice has to travel with any binary that carries them.
+    // GTK_LICENSE_CUSTOM, not GTK_LICENSE_UNKNOWN: the custom text is only rendered for the custom
+    // type, and with UNKNOWN the section shows its heading and nothing under it.
     adw_about_dialog_add_legal_section(
-        ADW_ABOUT_DIALOG(about), "Sound Canvas voice", nullptr, GTK_LICENSE_UNKNOWN,
+        ADW_ABOUT_DIALOG(about), "Sound Canvas Voice", nullptr, GTK_LICENSE_CUSTOM,
         "Reimplemented from a licensed copy of SCCore.dll, which is read as data and never loaded "
         "as code. Reverb and chorus coefficients are Roland-derived; see the NOTICE file "
         "distributed with this program.");

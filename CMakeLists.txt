@@ -24,6 +24,12 @@ set(TSGUI_BINARY_NAME "tabula-sonora-player")
 
 option(TSGUI_USE_INSTALLED_NATIVETS "Use find_package(TabulaSonora) instead of an in-tree copy" OFF)
 
+# Declared here rather than beside the other test plumbing because it decides whether the engine
+# below is configured to build its command line renderer too: the export test compares this
+# program's WAV output against `tabula-sonora render`, and that comparison only means anything if
+# both sides come from the same engine source.
+option(TSGUI_BUILD_TESTS "Build the test suite" ${PROJECT_IS_TOP_LEVEL})
+
 # The submodule first, then a sibling ../NativeTS checkout, so both a fresh recursive clone and a
 # working tree that already has the engine next to it build without an argument.
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/nativets/CMakeLists.txt")
@@ -47,7 +53,9 @@ else()
 
     # We want the library and nothing else: no Catch2, no CLI11, no install rules leaking into ours.
     set(TS_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-    set(TS_BUILD_CLI OFF CACHE BOOL "" FORCE)
+    # The CLI is the oracle the export test measures against, so it is built from this same tree
+    # when tests are on and left out entirely when they are not.
+    set(TS_BUILD_CLI ${TSGUI_BUILD_TESTS} CACHE BOOL "" FORCE)
     set(TS_BUILD_PLAYER OFF CACHE BOOL "" FORCE)
     set(TS_BUILD_TUI OFF CACHE BOOL "" FORCE)
     set(TS_BUILD_WEB OFF CACHE BOOL "" FORCE)
@@ -161,7 +169,6 @@ endif()
 add_subdirectory(src)
 add_subdirectory(data)
 
-option(TSGUI_BUILD_TESTS "Build the test suite" ${PROJECT_IS_TOP_LEVEL})
 if(TSGUI_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)

@@ -5,13 +5,18 @@ set(TSGUI_TEST_ROM "$ENV{TS_SCCORE_DLL}" CACHE FILEPATH
 
 set(TSGUI_TEST_MIDI "" CACHE FILEPATH "A MIDI file to render in the engine tests")
 
-find_program(TSGUI_TABULA_SONORA_CLI tabula-sonora
-    HINTS "${TSGUI_NATIVETS_DIR}/build/player/apps/cli"
-          "${TSGUI_NATIVETS_DIR}/build/release/apps/cli"
-    DOC "tabula-sonora CLI to compare exports against")
-
 add_executable(ts-export-tool ts_export_tool.cpp)
 target_link_libraries(ts-export-tool PRIVATE tsgui_host tsgui_warnings)
+
+# The CLI comes from the engine tree this program is linked against, not from whatever happens to be
+# on PATH or left over in a sibling checkout's build directory. Comparing our render against a
+# *different* build of the engine would fail whenever upstream changed the voice, which says nothing
+# about whether this program renders it faithfully -- the only question the test is asking.
+#
+# The engine is added with EXCLUDE_FROM_ALL, so the target has to be pulled in explicitly.
+if(TARGET tabula-sonora)
+    add_dependencies(ts-export-tool tabula-sonora)
+endif()
 
 add_executable(ts-host-smoke ts_host_smoke.cpp)
 target_link_libraries(ts-host-smoke PRIVATE tsgui_host tsgui_warnings)
@@ -52,16 +57,18 @@ add_test(NAME host-smoke
     COMMAND ts-host-smoke "${TSGUI_TEST_ROM}" "${TSGUI_TEST_MIDI}")
 set_tests_properties(host-smoke PROPERTIES LABELS "ring" TIMEOUT 120)
 
-if(TSGUI_TABULA_SONORA_CLI)
+if(TARGET tabula-sonora)
     add_test(NAME export-matches-cli
         COMMAND "${CMAKE_COMMAND}"
                 -DTOOL=$<TARGET_FILE:ts-export-tool>
-                -DCLI=${TSGUI_TABULA_SONORA_CLI}
+                -DCLI=$<TARGET_FILE:tabula-sonora>
                 -DROM=${TSGUI_TEST_ROM}
                 -DMIDI=${TSGUI_TEST_MIDI}
                 -DOUT_DIR=${CMAKE_CURRENT_BINARY_DIR}/export
                 -P "${CMAKE_CURRENT_SOURCE_DIR}/CompareExport.cmake")
     set_tests_properties(export-matches-cli PROPERTIES TIMEOUT 600)
 else()
-    message(STATUS "No tabula-sonora CLI found; the export byte-comparison will not be registered.")
+    message(WARNING
+        "The engine's CLI target is absent, so the export byte-comparison -- the test that proves "
+        "this program renders the engine faithfully -- will not run.")
 endif()

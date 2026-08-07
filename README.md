@@ -33,14 +33,19 @@ Dependencies: GTK ≥ 4.14, libadwaita ≥ 1.6, alsa-lib, zlib, plus `miniaudio`
 headers at build time.
 
 ```sh
-cmake --preset dev -DTSGUI_NATIVETS_DIR=/path/to/NativeTS
+git clone --recurse-submodules https://github.com/TabulaSonora/LinuxTSPlayer.git
+cd LinuxTSPlayer
+cmake --preset dev
 cmake --build --preset dev
 GSETTINGS_SCHEMA_DIR=build/dev/data ./build/dev/src/tabula-sonora-player
 ```
 
-The presets use vcpkg for `miniaudio`/`nlohmann-json`; a plain configure works too if both are
-installed system-wide. `TSGUI_NATIVETS_DIR` defaults to `./nativets`, then to a sibling `../NativeTS`
-checkout.
+The engine is the `nativets` submodule. `TSGUI_NATIVETS_DIR` overrides it, and if the submodule was
+not checked out the build falls back to a sibling `../NativeTS` before giving up with a message
+saying so.
+
+The presets use vcpkg for `miniaudio`, `nlohmann-json` and `cli11`; a plain configure works too if
+those are installed system-wide.
 
 `packaging/arch/` has a PKGBUILD.
 
@@ -59,8 +64,16 @@ ctest --preset dev          # needs $TS_SCCORE_DLL and -DTSGUI_TEST_MIDI=... for
 ```
 
 The load-bearing one is `export-matches-cli`: it renders a song through this program's export path
-and byte-compares the WAV against `tabula-sonora render`. If the host layer ever changes the
-engine's audio behaviour, that test fails.
+and byte-compares the WAV against `tabula-sonora render`. Both sides are built from the same engine
+tree, so the test asks only whether *this program* renders the engine faithfully, and does not turn
+red every time upstream changes the voice.
+
+It has already earned its keep. Export originally rendered in quarter-second chunks so it could
+report progress, which turns out to change the audio: `SequencePlayer::render` hands the generator
+every event due within the span it is given, stamped with the offset it falls at, and the engine
+rounds that stamp to the millisecond -- so the span boundaries decide where events land. An export
+is therefore a single `render_to_end` call, exactly as the CLI does it, and the progress bar is
+indeterminate because there is nothing to report from inside one.
 
 `tools/shoot.sh` screenshots the app on a throwaway Xvfb display, which is how the interface is
 checked without disturbing a running session.

@@ -5,6 +5,7 @@
   "description": "A Libadwaita player for the Tabula Sonora Sound Canvas voice.",
   "license": "BSD-3-Clause",
   "dependencies": [
+    "cli11",
     "miniaudio",
     "nlohmann-json"
   ]

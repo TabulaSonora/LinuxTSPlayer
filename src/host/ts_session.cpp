@@ -1,5 +1,6 @@
 #include "host/ts_session.hpp"
 
+#include "tabulasonora/engine_noise.hpp"
 #include "tabulasonora/patch_directory.hpp"
 #include "tabulasonora/sequence.hpp"
 #include "tabulasonora/wav_writer.hpp"
@@ -352,30 +353,47 @@ void Session::run_export(const ExportPlan& plan, const std::string& path,
 {
     // A second generator over the same note renderer, so exporting disturbs nothing that is playing
     // and costs no second read of the 27 MB of tables.
+    //
+    // The pseudo-random source is the one thing the two generators genuinely share: it lives on the
+    // note renderer because pitch jitter, random pan and the random LFO shapes all draw from it, and
+    // its sequence is deterministic *from engine reset*. A generator that has been built, armed, or
+    // played has already moved it, so an export starting from wherever it happened to be would
+    // differ from a fresh render of the same file -- and from itself, run twice. Resetting is what
+    // makes an export reproducible and byte-identical to `tabula-sonora render`.
+    //
+    // The cost is that exporting while playing perturbs the live random stream, and an export taken
+    // during playback interleaves draws with it, so only a quiet transport can promise those exact
+    // bytes. Both renditions are correct; they differ in which random pan each note draws.
+    plan.notes->noise().reset();
+
     ToneGenerator engine{*plan.notes, plan.options};
     SequencePlayer player{engine, smf::Song{plan.events, plan.loop}};
 
-    const auto total = static_cast<std::size_t>(plan.total);
-    std::vector<float> left(total, 0.0F);
-    std::vector<float> right(total, 0.0F);
+    // One pass, not a chunked loop, and this is not a stylistic choice.
+    //
+    // The length of a render call is part of the engine's event timing. `SequencePlayer::render`
+    // hands the generator every event due within the span it was given, stamped with the offset it
+    // falls at, and the engine rounds that stamp to the millisecond -- so the span boundaries decide
+    // where events land. Rendering a song a quarter-second at a time and rendering it in one call
+    // produce genuinely different audio, and it was the chunked form that disagreed with
+    // `tabula-sonora render`. `render_to_end` is the same call the CLI makes, which is what makes
+    // an export byte-identical to the reference rather than merely close to it.
+    //
+    // The cost is that there is nothing to report from inside it: progress is announced at the ends
+    // only, and a render already under way cannot be interrupted.
+    if (!progress(0.0)) {
+        return;
+    }
 
-    // A quarter-second at a time, so the caller can report progress and abort without the
-    // granularity of a whole song.
-    constexpr std::size_t chunk = static_cast<std::size_t>(sample_rate) / 4;
-    for (std::size_t rendered = 0; rendered < total;) {
-        const auto count = std::min(chunk, total - rendered);
-        player.render(std::span<float>{left.data() + rendered, count},
-                      std::span<float>{right.data() + rendered, count});
-        rendered += count;
+    const RenderResult rendered = player.render_to_end(tail_seconds);
 
-        if (!progress(static_cast<double>(rendered) / static_cast<double>(total))) {
-            return;
-        }
+    if (!progress(1.0)) {
+        return;
     }
 
     // Through the library's own writer, so an export from here and a `tabula-sonora render` with
     // the same settings are the same bytes, not merely similar ones.
-    wav::write(path, left, right, sample_rate);
+    wav::write(path, rendered.left, rendered.right, sample_rate);
 }
 
 ToneGeneratorOptions Session::options() const
