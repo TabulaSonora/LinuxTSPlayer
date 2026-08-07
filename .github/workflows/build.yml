@@ -1,0 +1,113 @@
+name: Build
+
+# Every push to main, every pull request, and every tag. The build is cached hard enough that an
+# ordinary commit only recompiles this project, so running it on all of them is cheap; a tag
+# additionally publishes the bundle as a release.
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# A second push while the first is still building makes the first pointless. Tags are exempt:
+# cancelling one would cancel a release.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+jobs:
+  flatpak:
+    name: Flatpak bundle
+    runs-on: ubuntu-latest
+
+    # The GNOME 50 image, matching the runtime the manifest asks for, so flatpak-builder and the
+    # runtime are already present. --privileged is what flatpak-builder needs to set up its own
+    # sandbox inside this one.
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-50
+      options: --privileged
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+        with:
+          # The engine is a submodule, and the manifest copies the working tree, so it has to be a
+          # real checkout rather than an empty directory.
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Trust the checkout
+        # The container runs as a different user than the one that cloned.
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Restore the build cache
+        uses: actions/cache@v6
+        with:
+          # flatpak-builder keeps downloaded sources and per-module build results here, and skips
+          # any module whose inputs are unchanged. nlohmann/json is the expensive one and its
+          # inputs never move, so in practice only this project is recompiled per commit.
+          path: .flatpak-builder
+          # Keyed by commit so each run saves an updated cache, with the manifest hash in the
+          # prefix: change a dependency version and the fallbacks below stop matching, which is
+          # exactly when the old build results stop being valid.
+          key: flatpak-gnome50-${{ hashFiles('packaging/flatpak/*.yml') }}-${{ github.sha }}
+          restore-keys: |
+            flatpak-gnome50-${{ hashFiles('packaging/flatpak/*.yml') }}-
+            flatpak-gnome50-
+
+      - name: Build
+        # Invoked directly rather than through flathub-infra/flatpak-github-actions: that action is
+        # untagged and still declares node20, which GitHub is retiring, and there is no newer
+        # version to move to. The image already provides everything it was doing for us.
+        #
+        # --disable-rofiles-fuse because the runner has no FUSE.
+        run: |
+          flatpak-builder \
+            --disable-rofiles-fuse \
+            --force-clean \
+            --install-deps-from=flathub \
+            --state-dir=.flatpak-builder \
+            --repo=repo \
+            builddir packaging/flatpak/co.losno.TabulaSonoraPlayer.yml
+
+      - name: Bundle
+        run: |
+          flatpak build-bundle repo tabula-sonora-player.flatpak co.losno.TabulaSonoraPlayer
+          ls -lh tabula-sonora-player.flatpak
+
+      - name: Upload
+        # On every run, so any commit's bundle can be downloaded and tried without cutting a tag.
+        uses: actions/upload-artifact@v7
+        with:
+          name: tabula-sonora-player-${{ github.sha }}
+          path: tabula-sonora-player.flatpak
+          if-no-files-found: error
+
+      - name: Publish
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v3
+        with:
+          files: tabula-sonora-player.flatpak
+          generate_release_notes: true
+          body: |
+            ## Installing
+
+            ```sh
+            flatpak install --user tabula-sonora-player.flatpak
+            flatpak run co.losno.TabulaSonoraPlayer
+            ```
+
+            The synthesizer needs a copy of `SCCore.dll` from a licensed Roland SOUND Canvas VA
+            1.1.6 installation — 27,347,456 bytes, SHA-256 `117e6aa1…c620bdb1`. It is not included
+            and cannot be: it holds Roland's wave ROM. The application asks for it on first launch,
+            reads it as data, and never loads it as code.
+
+            MIDI input needs access to the ALSA sequencer, which is why the bundle asks for device
+            access. Revoke it with `flatpak override --nodevice=all co.losno.TabulaSonoraPlayer`
+            and everything except playing from a keyboard still works.

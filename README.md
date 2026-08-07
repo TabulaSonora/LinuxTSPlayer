@@ -20,6 +20,36 @@ It plays far more than SMF — RIFF-MIDI, DirectMusic `MIDS`, DOOM `MUS`, Miles 
 containers, Mobile XMF and LDS tracker files — because the engine converts all of them to SMF on the
 way in.
 
+## Installing
+
+A Flatpak bundle is attached to each [release](https://github.com/TabulaSonora/LinuxTSPlayer/releases):
+
+```sh
+flatpak install --user tabula-sonora-player.flatpak
+flatpak run co.losno.TabulaSonoraPlayer
+```
+
+Flatpak rather than a `.deb` or `.rpm` for a concrete reason. The interface needs libadwaita 1.6 for
+`AdwMultiLayoutView`, `AdwSpinner` and the accent-colour API, and two distributions people actually
+run cannot supply it: Ubuntu 24.04 LTS ships 1.5.0 and is supported until 2029, and Debian 12 ships
+1.2.2. Native packages for those could not be built at all. The GNOME runtime carries its own
+libadwaita, so one bundle reaches every distribution — and there is one packaging format to maintain
+instead of three.
+
+Arch users can build the package in `packaging/arch/` instead, which links against the system
+libadwaita.
+
+Two permissions the bundle asks for, and why:
+
+- `--device=all`, because the ALSA sequencer is at `/dev/snd/seq` and Flatpak has no narrower grant
+  that reaches it. Revoke it with `flatpak override --nodevice=all co.losno.TabulaSonoraPlayer` and
+  everything except playing from a MIDI keyboard still works.
+- `--filesystem=host:ro`, because dragging a file onto the window and naming one on the command line
+  both hand over a bare path rather than a portal document, and music does not live in `~/Music` —
+  it lives on whichever disk the collection was ripped to. Nothing is written outside the sandbox:
+  exports go through the save portal and the ROM is copied into the application's own data
+  directory.
+
 ## The ROM
 
 **The engine is inert without `SCCore.dll`** from a licensed Roland SOUND Canvas VA 1.1.6 install:
@@ -47,7 +77,20 @@ saying so.
 The presets use vcpkg for `miniaudio`, `nlohmann-json` and `cli11`; a plain configure works too if
 those are installed system-wide.
 
-`packaging/arch/` has a PKGBUILD.
+### Packaging
+
+`packaging/arch/` has a PKGBUILD. `packaging/flatpak/` has the Flatpak manifest:
+
+```sh
+flatpak-builder --user --install --force-clean build-flatpak \
+    packaging/flatpak/co.losno.TabulaSonoraPlayer.yml
+```
+
+It copies the working tree rather than pulling a git ref, because a release is built from a tag,
+where the checkout is a detached HEAD and no branch name resolves. `build/` is excluded.
+
+CI builds the bundle on every push and attaches it to a release on any `v*` tag. Only this project
+is recompiled per commit — the dependency modules are cached, so a warm build is seconds.
 
 ### Two build rules that are not preferences
 
