@@ -81,6 +81,10 @@ jobs:
           flatpak build-bundle repo tabula-sonora-player.flatpak co.losno.TabulaSonoraPlayer
           ls -lh tabula-sonora-player.flatpak
 
+      - name: Name the build
+        id: name
+        run: echo "short=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
       - name: Upload
         # On every run, so any commit's bundle can be downloaded and tried without cutting a tag.
         uses: actions/upload-artifact@v7
@@ -88,6 +92,27 @@ jobs:
           name: tabula-sonora-player-${{ github.sha }}
           path: tabula-sonora-player.flatpak
           if-no-files-found: error
+
+      # Every push to main is a release of its own, marked as a prerelease and explicitly not
+      # "latest" so it never displaces a tagged one. A push carrying several commits produces a
+      # single release covering them, which is what generate_release_notes summarises.
+      - name: Publish a development build
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: main-${{ steps.name.outputs.short }}
+          name: Development build ${{ steps.name.outputs.short }}
+          prerelease: true
+          make_latest: false
+          generate_release_notes: true
+          files: tabula-sonora-player.flatpak
+          body: |
+            An automatic build of `main` at ${{ steps.name.outputs.short }}. Unreleased work, not a
+            version: for a stable build use the newest release without this notice.
+
+            ```sh
+            flatpak install --user tabula-sonora-player.flatpak
+            ```
 
       - name: Publish
         if: startsWith(github.ref, 'refs/tags/v')
@@ -111,3 +136,31 @@ jobs:
             MIDI input needs access to the ALSA sequencer, which is why the bundle asks for device
             access. Revoke it with `flatpak override --nodevice=all co.losno.TabulaSonoraPlayer`
             and everything except playing from a keyboard still works.
+
+  prune:
+    name: Prune old development builds
+    needs: flatpak
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    # Not in the flatpak image: this needs the gh CLI, which the standard runner has and that
+    # container does not.
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Keep the ten newest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # A release per push accumulates quickly. Only prereleases tagged main-* are considered, so
+        # a tagged version is never at risk however old it gets. --cleanup-tag takes the tag with
+        # the release, leaving no orphan tags behind.
+        #
+        # gh has jq built in, so this needs no extra tool and no inline script.
+        run: |
+          gh release list --repo "$GITHUB_REPOSITORY" --limit 200 \
+            --json tagName,isPrerelease,createdAt \
+            --jq '[.[] | select(.isPrerelease and (.tagName | startswith("main-")))]
+                  | sort_by(.createdAt) | reverse | .[10:] | .[].tagName' \
+          | while read -r tag; do
+              echo "Removing $tag"
+              gh release delete "$tag" --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag
+            done

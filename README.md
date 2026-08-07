@@ -22,7 +22,9 @@ way in.
 
 ## Installing
 
-A Flatpak bundle is attached to each [release](https://github.com/TabulaSonora/LinuxTSPlayer/releases):
+A Flatpak bundle is attached to each [release](https://github.com/TabulaSonora/LinuxTSPlayer/releases).
+Releases marked as prereleases and tagged `main-<sha>` are automatic builds of the latest commit;
+anything else is a tagged version.
 
 ```sh
 flatpak install --user tabula-sonora-player.flatpak
@@ -89,8 +91,13 @@ flatpak-builder --user --install --force-clean build-flatpak \
 It copies the working tree rather than pulling a git ref, because a release is built from a tag,
 where the checkout is a detached HEAD and no branch name resolves. `build/` is excluded.
 
-CI builds the bundle on every push and attaches it to a release on any `v*` tag. Only this project
-is recompiled per commit — the dependency modules are cached, so a warm build is seconds.
+CI builds the bundle on every push and publishes it. A push to `main` becomes a prerelease tagged
+`main-<sha>` covering whatever commits it carried; a `v*` tag becomes a proper release. Only the ten
+newest development builds are kept — tagged versions are never pruned — and every run also uploads
+the bundle as a workflow artifact.
+
+Only this project is recompiled per commit: the dependency modules are cached, so a warm build takes
+seconds rather than minutes.
 
 ### Two build rules that are not preferences
 
