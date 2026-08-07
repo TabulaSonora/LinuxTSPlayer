@@ -115,9 +115,37 @@ static void ts_voice_meter_class_init(TsVoiceMeterClass* klass)
     gtk_widget_class_set_css_name(widget_class, "voicemeter");
 }
 
+/// Answers when GTK asks, rather than being pushed a new string every time the count moves.
+///
+/// This is the difference between a tooltip that works during playback and one that never appears.
+/// `gtk_widget_set_tooltip_text` re-triggers a tooltip query, and a query acts on the whole display
+/// -- so a meter rewriting its tooltip several times a second was cancelling the hover timer of
+/// every other widget in the window, and while a song played nothing anywhere had time to show.
+static gboolean ts_voice_meter_query_tooltip(GtkWidget* widget, int x, int y, gboolean keyboard,
+                                             GtkTooltip* tooltip, gpointer user_data)
+{
+    (void)x;
+    (void)y;
+    (void)keyboard;
+    (void)user_data;
+
+    auto* self = TS_VOICE_METER(widget);
+    if (self->voices == 0) {
+        return FALSE;
+    }
+
+    g_autofree char* text = g_strdup_printf(
+        g_dngettext(nullptr, "%d voice sounding", "%d voices sounding", self->voices), self->voices);
+    gtk_tooltip_set_text(tooltip, text);
+    return TRUE;
+}
+
 static void ts_voice_meter_init(TsVoiceMeter* self)
 {
     gtk_widget_set_valign(GTK_WIDGET(self), GTK_ALIGN_CENTER);
+
+    gtk_widget_set_has_tooltip(GTK_WIDGET(self), TRUE);
+    g_signal_connect(self, "query-tooltip", G_CALLBACK(ts_voice_meter_query_tooltip), nullptr);
 }
 
 GtkWidget* ts_voice_meter_new(void)
@@ -136,15 +164,7 @@ void ts_voice_meter_set_voices(TsVoiceMeter* self, int voices)
     gtk_widget_queue_draw(GTK_WIDGET(self));
     g_object_notify_by_pspec(G_OBJECT(self), properties[PROP_VOICES]);
 
-    if (wanted == 0) {
-        gtk_widget_set_tooltip_text(GTK_WIDGET(self), nullptr);
-    } else {
-        char* tooltip = g_strdup_printf(g_dngettext(nullptr, "%d voice sounding",
-                                                    "%d voices sounding", wanted),
-                                        wanted);
-        gtk_widget_set_tooltip_text(GTK_WIDGET(self), tooltip);
-        g_free(tooltip);
-    }
+    // No tooltip is pushed here on purpose; see the query handler above.
 }
 
 int ts_voice_meter_get_voices(TsVoiceMeter* self)

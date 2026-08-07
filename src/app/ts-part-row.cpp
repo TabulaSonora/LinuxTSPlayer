@@ -54,9 +54,7 @@ static void ts_part_row_sync(TsPartRow* self)
     gtk_label_set_text(GTK_LABEL(self->tags), tags != nullptr ? tags : "");
     gtk_widget_set_visible(self->tags, tags != nullptr && *tags != '\0');
 
-    // The strip has room for a name and an abbreviation; the numbers behind them go in tooltips.
-    gtk_widget_set_tooltip_text(self->label, ts_part_get_address(self->part));
-    gtk_widget_set_tooltip_text(self->names, ts_part_get_detail(self->part));
+    // Tooltips are answered on demand rather than written here; see the query handler below.
 
     ts_voice_meter_set_voices(TS_VOICE_METER(self->meter), voices);
 
@@ -68,6 +66,34 @@ static void ts_part_row_sync(TsPartRow* self)
     gtk_widget_set_opacity(GTK_WIDGET(self), dimmed ? 0.45 : 1.0);
 
     self->updating = FALSE;
+}
+
+/// The strip has room for a name and an abbreviation; the numbers behind both go in tooltips, read
+/// from the bound part when GTK asks for them.
+///
+/// Asked for rather than pushed: setting a tooltip re-triggers a display-wide tooltip query, so a
+/// row that rewrote its tooltips as the part changed would cancel the hover timer of whatever the
+/// pointer was actually resting on.
+static gboolean on_query_tooltip(GtkWidget* widget, int x, int y, gboolean keyboard,
+                                 GtkTooltip* tooltip, gpointer user_data)
+{
+    (void)x;
+    (void)y;
+    (void)keyboard;
+
+    auto* self = TS_PART_ROW(user_data);
+    if (self->part == nullptr) {
+        return FALSE;
+    }
+
+    const char* text =
+        widget == self->label ? ts_part_get_address(self->part) : ts_part_get_detail(self->part);
+    if (text == nullptr || *text == '\0') {
+        return FALSE;
+    }
+
+    gtk_tooltip_set_text(tooltip, text);
+    return TRUE;
 }
 
 static void on_part_notify(GObject* part, GParamSpec* spec, gpointer user_data)
@@ -158,12 +184,16 @@ static void ts_part_row_init(TsPartRow* self)
     gtk_label_set_xalign(GTK_LABEL(self->label), 0.0F);
     gtk_widget_set_size_request(self->label, 34, -1);
     gtk_widget_set_valign(self->label, GTK_ALIGN_CENTER);
+    gtk_widget_set_has_tooltip(self->label, TRUE);
+    g_signal_connect(self->label, "query-tooltip", G_CALLBACK(on_query_tooltip), self);
     gtk_box_append(GTK_BOX(box), self->label);
 
     self->names = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
     GtkWidget* names = self->names;
     gtk_widget_set_valign(names, GTK_ALIGN_CENTER);
     gtk_widget_set_hexpand(names, TRUE);
+    gtk_widget_set_has_tooltip(names, TRUE);
+    g_signal_connect(names, "query-tooltip", G_CALLBACK(on_query_tooltip), self);
 
     self->name = gtk_label_new("");
     gtk_label_set_xalign(GTK_LABEL(self->name), 0.0F);

@@ -107,7 +107,6 @@ static void ts_transport_sync(TsTransport* self)
     gtk_button_set_icon_name(GTK_BUTTON(self->play),
                              playing ? "media-playback-pause-symbolic"
                                      : "media-playback-start-symbolic");
-    gtk_widget_set_tooltip_text(self->play, playing ? "Pause" : "Play");
     gtk_widget_set_sensitive(self->play, has_song);
 
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(self->loop), looping);
@@ -188,6 +187,18 @@ static void on_loop_toggled(GtkToggleButton* button, gpointer user_data)
         return;
     }
     g_object_set(self->model, "looping", gtk_toggle_button_get_active(button), nullptr);
+}
+
+/// Answered on demand: the label flips with the transport, and pushing it would re-trigger a
+/// display-wide tooltip query each time playback started or stopped.
+static gboolean on_play_query_tooltip(GtkWidget*, int, int, gboolean, GtkTooltip* tooltip,
+                                      gpointer user_data)
+{
+    auto* self = TS_TRANSPORT(user_data);
+    gboolean playing = FALSE;
+    g_object_get(self->model, "playing", &playing, nullptr);
+    gtk_tooltip_set_text(tooltip, playing ? "Pause" : "Play");
+    return TRUE;
 }
 
 // -- Construction --------------------------------------------------------------------------------
@@ -279,9 +290,10 @@ static void ts_transport_init(TsTransport* self)
     GtkWidget* controls = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
 
     self->play = gtk_button_new_from_icon_name("media-playback-start-symbolic");
+    gtk_widget_set_has_tooltip(self->play, TRUE);
+    g_signal_connect(self->play, "query-tooltip", G_CALLBACK(on_play_query_tooltip), self);
     gtk_widget_add_css_class(self->play, "suggested-action");
     gtk_widget_add_css_class(self->play, "circular");
-    gtk_widget_set_tooltip_text(self->play, "Play");
     gtk_actionable_set_action_name(GTK_ACTIONABLE(self->play), "win.play-pause");
     gtk_box_append(GTK_BOX(controls), self->play);
 
