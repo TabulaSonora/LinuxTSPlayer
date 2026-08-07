@@ -1,4 +1,4 @@
-# Maintainer: Kevin <anthropic@kddlb.cl>
+# Maintainer: Kevin López Brante <kevin@kddlb.cl>
 
 # Point this at a published repository, or at a local checkout to build what is on this machine:
 #
@@ -13,7 +13,7 @@ _pkgname=tabula-sonora-player
 # static checker that the sources deliberately track upstream HEAD, and it should not need a
 # variable expanded before that is visible.
 pkgname=tabula-sonora-player-git
-pkgver=0.0.0.r4.g9716873
+pkgver=0.0.0.r5.g35cb57a
 pkgrel=1
 pkgdesc="Play MIDI files through a native reimplementation of the Roland Sound Canvas VA voice"
 arch=('x86_64' 'aarch64')

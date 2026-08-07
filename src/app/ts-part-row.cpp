@@ -12,6 +12,7 @@ struct _TsPartRow {
     TsPart* part;
 
     GtkWidget* label;
+    GtkWidget* names;
     GtkWidget* name;
     GtkWidget* tags;
     GtkWidget* meter;
@@ -52,6 +53,10 @@ static void ts_part_row_sync(TsPartRow* self)
     gtk_label_set_text(GTK_LABEL(self->name), name != nullptr ? name : "");
     gtk_label_set_text(GTK_LABEL(self->tags), tags != nullptr ? tags : "");
     gtk_widget_set_visible(self->tags, tags != nullptr && *tags != '\0');
+
+    // The strip has room for a name and an abbreviation; the numbers behind them go in tooltips.
+    gtk_widget_set_tooltip_text(self->label, ts_part_get_address(self->part));
+    gtk_widget_set_tooltip_text(self->names, ts_part_get_detail(self->part));
 
     ts_voice_meter_set_voices(TS_VOICE_METER(self->meter), voices);
 
@@ -155,7 +160,8 @@ static void ts_part_row_init(TsPartRow* self)
     gtk_widget_set_valign(self->label, GTK_ALIGN_CENTER);
     gtk_box_append(GTK_BOX(box), self->label);
 
-    GtkWidget* names = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+    self->names = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+    GtkWidget* names = self->names;
     gtk_widget_set_valign(names, GTK_ALIGN_CENTER);
     gtk_widget_set_hexpand(names, TRUE);
 

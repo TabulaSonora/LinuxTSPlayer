@@ -14,6 +14,8 @@ struct _TsPart {
     char* label;
     char* name;
     char* tags;
+    char* detail;
+    char* address;
 
     int voices;
     gboolean muted;
@@ -29,6 +31,7 @@ enum {
     PROP_LABEL = 1,
     PROP_NAME,
     PROP_TAGS,
+    PROP_DETAIL,
     PROP_VOICES,
     PROP_MUTED,
     PROP_SOLOED,
@@ -46,6 +49,8 @@ static void ts_part_finalize(GObject* object)
     g_clear_pointer(&self->label, g_free);
     g_clear_pointer(&self->name, g_free);
     g_clear_pointer(&self->tags, g_free);
+    g_clear_pointer(&self->detail, g_free);
+    g_clear_pointer(&self->address, g_free);
     G_OBJECT_CLASS(ts_part_parent_class)->finalize(object);
 }
 
@@ -57,6 +62,7 @@ static void ts_part_get_property(GObject* object, guint id, GValue* value, GPara
     case PROP_LABEL: g_value_set_string(value, self->label); break;
     case PROP_NAME: g_value_set_string(value, self->name); break;
     case PROP_TAGS: g_value_set_string(value, self->tags); break;
+    case PROP_DETAIL: g_value_set_string(value, self->detail); break;
     case PROP_VOICES: g_value_set_int(value, self->voices); break;
     case PROP_MUTED: g_value_set_boolean(value, self->muted); break;
     case PROP_SOLOED: g_value_set_boolean(value, self->soloed); break;
@@ -79,6 +85,7 @@ static void ts_part_class_init(TsPartClass* klass)
     properties[PROP_LABEL] = g_param_spec_string("label", nullptr, nullptr, nullptr, read_only);
     properties[PROP_NAME] = g_param_spec_string("name", nullptr, nullptr, nullptr, read_only);
     properties[PROP_TAGS] = g_param_spec_string("tags", nullptr, nullptr, nullptr, read_only);
+    properties[PROP_DETAIL] = g_param_spec_string("detail", nullptr, nullptr, nullptr, read_only);
     properties[PROP_VOICES] = g_param_spec_int("voices", nullptr, nullptr, 0, G_MAXINT, 0, read_only);
     properties[PROP_MUTED] = g_param_spec_boolean("muted", nullptr, nullptr, FALSE, read_only);
     properties[PROP_SOLOED] = g_param_spec_boolean("soloed", nullptr, nullptr, FALSE, read_only);
@@ -94,6 +101,8 @@ static void ts_part_init(TsPart* self)
     self->label = g_strdup("");
     self->name = g_strdup("");
     self->tags = g_strdup("");
+    self->detail = g_strdup("");
+    self->address = g_strdup("");
 }
 
 TsPart* ts_part_new(int index)
@@ -108,10 +117,15 @@ TsPart* ts_part_new(int index)
     g_free(self->label);
     self->label = g_strdup_printf("%c%d", 'A' + port, channel + 1);
 
+    g_free(self->address);
+    self->address = g_strdup_printf("Port %c, channel %d", 'A' + port, channel + 1);
+
     return self;
 }
 
 int ts_part_get_index(TsPart* self) { return self->index; }
+const char* ts_part_get_detail(TsPart* self) { return self->detail; }
+const char* ts_part_get_address(TsPart* self) { return self->address; }
 gboolean ts_part_get_present(TsPart* self) { return self->present; }
 gboolean ts_part_get_muted(TsPart* self) { return self->muted; }
 gboolean ts_part_get_soloed(TsPart* self) { return self->soloed; }
@@ -168,12 +182,42 @@ std::string tags_for(const ts::host::PartState& state)
     return tags;
 }
 
+/// The numbers behind the name.
+///
+/// Programs are counted from one, as every patch chart and every module's own display counts them,
+/// while the wire value is zero-based -- so the raw byte is given too rather than leaving anyone
+/// comparing against a MIDI capture to work out which convention this is.
+///
+/// Both halves of the bank select appear because neither identifies anything alone: on this module
+/// the MSB carries the variation and the LSB names the vintage.
+std::string detail_for(const ts::host::PartState& state)
+{
+    std::string detail;
+
+    if (state.drums && state.kit >= 0) {
+        detail += "Drum kit " + std::to_string(state.kit) + " · ";
+    }
+
+    detail += "Program " + std::to_string(state.program + 1) + " (PC " + std::to_string(state.program)
+              + ")";
+    detail += " · Bank MSB " + std::to_string(state.bank) + ", LSB " + std::to_string(state.bankLsb);
+
+    // Under XG the melodic lookup is not given the bank the part was sent, so saying only what was
+    // sent would misdescribe what is sounding.
+    if (!state.drums && state.lookupBank != state.bank) {
+        detail += " (resolves against bank " + std::to_string(state.lookupBank) + ")";
+    }
+
+    return detail;
+}
+
 } // namespace
 
 void ts_part_update(TsPart* self, const ts::host::PartState& state, gboolean dimmed)
 {
     set_string(self, self->name, state.name.empty() ? "—" : state.name.c_str(), PROP_NAME);
     set_string(self, self->tags, tags_for(state).c_str(), PROP_TAGS);
+    set_string(self, self->detail, detail_for(state).c_str(), PROP_DETAIL);
 
     set_int(self, self->voices, state.voices, PROP_VOICES);
     set_bool(self, self->muted, state.muted ? TRUE : FALSE, PROP_MUTED);

@@ -253,6 +253,9 @@ static void ts_transport_init(TsTransport* self)
     self->scale = gtk_scale_new(GTK_ORIENTATION_HORIZONTAL, self->adjustment);
     gtk_scale_set_draw_value(GTK_SCALE(self->scale), FALSE);
     gtk_widget_set_hexpand(self->scale, TRUE);
+    gtk_widget_set_tooltip_text(self->scale,
+                                "Seek. Jumping replays the controllers up to that point, so the "
+                                "parts sound as they would have.");
     gtk_box_append(GTK_BOX(seek), self->scale);
 
     GtkWidget* times = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);

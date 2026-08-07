@@ -17,6 +17,14 @@ TsPart* ts_part_new(int index);
 /// `port * 16 + channel`, which is how the engine addresses parts and how mute and solo are keyed.
 int ts_part_get_index(TsPart* self);
 
+/// What the part is actually playing, in the numbers a patch list is indexed by: the program and
+/// the bank select pair. The sounding instrument's *name* answers "what is this"; this answers
+/// "which entry is it", which is the question anyone comparing against a module's chart has.
+const char* ts_part_get_detail(TsPart* self);
+
+/// "Port A, channel 1" spelled out, because the strip only has room for "A1".
+const char* ts_part_get_address(TsPart* self);
+
 gboolean ts_part_get_present(TsPart* self);
 gboolean ts_part_get_muted(TsPart* self);
 gboolean ts_part_get_soloed(TsPart* self);

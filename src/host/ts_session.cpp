@@ -313,6 +313,7 @@ void Session::capture(SessionSnapshot& into) const
 
         state.program = part.program;
         state.bank = part.bank;
+        state.bankLsb = part.bank_lsb;
         state.volume = part.volume();
         state.expression = part.expression();
         state.pan = part.pan;

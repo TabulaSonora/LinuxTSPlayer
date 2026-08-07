@@ -22,7 +22,14 @@ namespace ts::host {
 /// One part's state, as of the last block rendered.
 struct PartState {
     int program = 0;
+
+    /// Bank select MSB, which carries the variation.
     int bank = 0;
+
+    /// Bank select LSB, which on this module names the vintage: 1-4 pick one and 0 keeps the
+    /// configured default. Worth showing beside the MSB because the pair is what a patch list is
+    /// indexed by, and either one alone identifies nothing.
+    int bankLsb = 0;
     int volume = 0;
     int expression = 0;
     int pan = 0x40;
