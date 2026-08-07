@@ -59,9 +59,19 @@ sha256sums=('SKIP' 'SKIP')
 
 pkgver() {
     cd "${srcdir}/${_pkgname}"
-    # Tagged releases read as 0.1.0.r12.gabc1234; an untagged tree falls back to a plain count.
-    git describe --long --tags 2>/dev/null | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g' \
-        || printf "0.0.0.r%s.g%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+
+    # Tagged releases read as 0.1.0.r12.gabc1234; an untagged tree falls back to a plain commit
+    # count, which is what this gets until the first tag exists.
+    #
+    # The two cases are separated rather than joined with ||, because a pipeline reports the exit
+    # status of its *last* command: `git describe | sed` succeeds whenever sed does, so a failing
+    # describe on an untagged repository produced an empty version instead of the fallback.
+    local described
+    if described=$(git describe --long --tags 2>/dev/null); then
+        printf '%s' "${described}" | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'
+    else
+        printf '0.0.0.r%s.g%s' "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+    fi
 }
 
 build() {

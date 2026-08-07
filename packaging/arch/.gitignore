@@ -1,0 +1,7 @@
+# makepkg builds in place, scattering bare clones, src/, pkg/ and package archives through this
+# directory. An allowlist rather than a list of those names: makepkg's working directories are
+# named after the sources, so any new source would add another one to miss.
+*
+!.gitignore
+!PKGBUILD
+!*.install

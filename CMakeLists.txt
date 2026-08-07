@@ -121,7 +121,12 @@ find_program(GLIB_COMPILE_RESOURCES glib-compile-resources REQUIRED)
 find_program(GLIB_COMPILE_SCHEMAS glib-compile-schemas REQUIRED)
 
 # miniaudio is a single header; the implementation lives in one translation unit of ours.
-find_path(MINIAUDIO_INCLUDE_DIR miniaudio.h REQUIRED)
+#
+# PATH_SUFFIXES because distributions disagree about where it goes: vcpkg installs it as
+# <prefix>/include/miniaudio.h, while Arch's package puts it in a directory of its own at
+# /usr/include/miniaudio/miniaudio.h. Either way what we want is the directory that makes
+# `#include <miniaudio.h>` resolve.
+find_path(MINIAUDIO_INCLUDE_DIR miniaudio.h PATH_SUFFIXES miniaudio REQUIRED)
 
 include(GNUInstallDirs)
 include(cmake/CompileGResource.cmake)
