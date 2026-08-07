@@ -145,6 +145,19 @@ target_compile_options(tsgui_warnings INTERFACE
     # Generated GResource code is C, which has no virtual destructors to warn about.
     $<$<COMPILE_LANGUAGE:CXX>:-Wnon-virtual-dtor>)
 
+# Absolute source paths otherwise reach the finished binary through __FILE__, which GLib embeds in
+# G_OBJECT_WARN_INVALID_PROPERTY_ID and the g_return_if_fail family -- so every GObject property
+# getter leaves the build directory's full path in the executable. makepkg reports a package that
+# mentions its own $srcdir, and rightly: it is build-host detail nobody downstream should receive.
+#
+# Placed here rather than at the top of the file so it applies to our own targets and not to the
+# engine, which is added above and is upstream's to configure.
+include(CheckCXXCompilerFlag)
+check_cxx_compiler_flag("-ffile-prefix-map=${CMAKE_SOURCE_DIR}=." TSGUI_HAVE_FILE_PREFIX_MAP)
+if(TSGUI_HAVE_FILE_PREFIX_MAP)
+    add_compile_options("-ffile-prefix-map=${CMAKE_SOURCE_DIR}=.")
+endif()
+
 add_subdirectory(src)
 add_subdirectory(data)
 
