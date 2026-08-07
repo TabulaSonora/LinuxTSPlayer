@@ -30,6 +30,17 @@ if(DESKTOP_FILE_VALIDATE)
                 "${CMAKE_BINARY_DIR}/data/${TSGUI_APP_ID}.desktop")
 endif()
 
+find_program(XDG_MIME xdg-mime)
+if(UPDATE_MIME_DATABASE AND XDG_MIME)
+    add_test(NAME mime-types
+        COMMAND "${CMAKE_COMMAND}"
+                -DMIME_XML=${CMAKE_SOURCE_DIR}/data/${TSGUI_APP_ID}.mime.xml
+                -DUPDATE_MIME_DATABASE=${UPDATE_MIME_DATABASE}
+                -DXDG_MIME=${XDG_MIME}
+                -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/mime
+                -P "${CMAKE_CURRENT_SOURCE_DIR}/CheckMimeTypes.cmake")
+endif()
+
 find_program(APPSTREAM_UTIL appstream-util)
 if(APPSTREAM_UTIL)
     add_test(NAME metainfo

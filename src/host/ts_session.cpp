@@ -194,6 +194,22 @@ void Session::panic()
     }
 }
 
+void Session::silence()
+{
+    if (!engine_) {
+        return;
+    }
+
+    constexpr int all_sound_off = 120;
+
+    const int ports = std::max(1, settings_.ports);
+    for (int port = 0; port < ports; ++port) {
+        for (int channel = 0; channel < Sequence::channel_count; ++channel) {
+            send_control(port, channel, all_sound_off, 0);
+        }
+    }
+}
+
 void Session::render(std::span<float> left, std::span<float> right)
 {
     if (player_) {

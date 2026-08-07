@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The legacy game-music containers the engine reads, none of which shared-mime-info knows about.
+
+  Declaring these in the desktop entry alone accomplishes nothing: an association is only reachable
+  if something can recognise the file in the first place, and a MIME type with no definition never
+  matches anything. This is the half that makes double-clicking work.
+
+  Deliberately absent, because the system already defines them:
+    audio/midi        *.mid *.midi *.kar, with magic
+    audio/x-midi      an alias of audio/midi
+    audio/x-xmf       *.xmf, with magic
+    audio/mobile-xmf  *.mxmf, with magic
+
+  Every signature below is taken from the engine's own reader (NativeTS
+  src/midi/midi_formats.cpp), so detection here and acceptance there cannot drift apart.
+-->
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+
+  <mime-type type="audio/x-rmid">
+    <comment>RIFF MIDI audio</comment>
+    <acronym>RMID</acronym>
+    <expanded-acronym>Resource Interchange File Format MIDI</expanded-acronym>
+    <sub-class-of type="audio/midi"/>
+    <glob pattern="*.rmi"/>
+    <glob pattern="*.rmid"/>
+    <magic priority="60">
+      <match type="string" value="RIFF" offset="0">
+        <match type="string" value="RMID" offset="8"/>
+      </match>
+    </magic>
+  </mime-type>
+
+  <mime-type type="audio/x-mids">
+    <comment>DirectMusic sequence</comment>
+    <glob pattern="*.mids"/>
+    <magic priority="60">
+      <match type="string" value="RIFF" offset="0">
+        <!-- The inner four-character code is what tells this apart from RMID. -->
+        <match type="string" value="MIDS" offset="8"/>
+      </match>
+    </magic>
+  </mime-type>
+
+  <mime-type type="audio/x-mus">
+    <comment>DOOM music</comment>
+    <glob pattern="*.mus"/>
+    <magic priority="60">
+      <match type="string" value="MUS\x1a" offset="0"/>
+    </magic>
+  </mime-type>
+
+  <mime-type type="audio/x-xmi">
+    <comment>Miles extended MIDI</comment>
+    <acronym>XMI</acronym>
+    <glob pattern="*.xmi"/>
+    <glob pattern="*.xmid"/>
+    <!--
+      A higher priority than the default 50 on purpose: shared-mime-info already gives *.xmi to
+      text/x-xmi, so the glob alone would lose. The magic below settles it for any real file, and
+      this only decides the extension-only case.
+    -->
+    <magic priority="60">
+      <match type="string" value="FORM" offset="0">
+        <match type="string" value="XDIR" offset="8"/>
+      </match>
+    </magic>
+  </mime-type>
+
+  <mime-type type="audio/x-gmf">
+    <comment>GMF music</comment>
+    <glob pattern="*.gmf"/>
+    <magic priority="60">
+      <match type="string" value="GMF\x01" offset="0"/>
+    </magic>
+  </mime-type>
+
+  <mime-type type="audio/x-hmi">
+    <comment>Human Machine Interfaces music</comment>
+    <glob pattern="*.hmi"/>
+    <magic priority="60">
+      <match type="string" value="HMI-MIDISONG" offset="0"/>
+    </magic>
+  </mime-type>
+
+  <mime-type type="audio/x-hmp">
+    <comment>Human Machine Interfaces MIDI P</comment>
+    <glob pattern="*.hmp"/>
+    <magic priority="60">
+      <match type="string" value="HMIMIDI" offset="0"/>
+    </magic>
+  </mime-type>
+
+  <mime-type type="audio/x-lds">
+    <comment>Loudness Sound System music</comment>
+    <!--
+      Glob only. LDS has no signature at all: the engine recognises it by its name and then by the
+      first byte being a plausible mode, which is far too weak to hand to a system-wide sniffer.
+    -->
+    <glob pattern="*.lds"/>
+  </mime-type>
+
+</mime-info>

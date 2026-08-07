@@ -143,6 +143,17 @@ public:
     /// Silences everything and returns every part to its power-on state.
     void panic();
 
+    /// Stops every sounding note without disturbing anything else.
+    ///
+    /// All Sound Off (CC 120) on every part, which is the one message defined to silence a part
+    /// regardless of whether its sustain pedal is down, and which changes no controller value --
+    /// so unlike `panic` the song can resume into exactly the state it left.
+    ///
+    /// This is what pausing needs. A paused transport still renders, so that a keyboard stays
+    /// playable, but the sequencer is not advancing: any note the song was holding would never
+    /// reach its note-off and would sound until the transport started again.
+    void silence();
+
     /// Renders the next block. Live notes sound over a running song, since one generator serves
     /// both. Fills with silence when there is no engine, rather than leaving the caller's buffer
     /// holding the previous block.

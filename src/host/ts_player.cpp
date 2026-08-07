@@ -115,7 +115,17 @@ void Player::set_paused(bool paused)
     if (paused) {
         ring_.set_starvation_expected(true);
     }
+
     paused_.store(paused, std::memory_order_relaxed);
+
+    // Cut whatever the song was holding, after the flag is set so the sequencer has already stopped
+    // advancing. Without this a note held across a pause never reaches its note-off -- the render
+    // loop goes on rendering, because a stopped transport still has to answer a keyboard -- and the
+    // chord sounds until playback resumes.
+    if (paused) {
+        const std::lock_guard<std::mutex> guard{lock_};
+        session_.silence();
+    }
 }
 
 void Player::set_latency_ms(int milliseconds) noexcept
