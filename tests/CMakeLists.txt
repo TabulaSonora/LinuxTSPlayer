@@ -31,12 +31,21 @@ if(DESKTOP_FILE_VALIDATE)
 endif()
 
 find_program(XDG_MIME xdg-mime)
-if(UPDATE_MIME_DATABASE AND XDG_MIME)
+
+# The system's own MIME definitions, copied into the throwaway database so the check runs against a
+# known set rather than against whatever this machine happens to have installed -- including, once
+# the application is installed anywhere, its own definitions.
+find_file(FREEDESKTOP_MIME freedesktop.org.xml
+    PATHS /usr/share/mime/packages /usr/local/share/mime/packages
+    NO_DEFAULT_PATH)
+
+if(UPDATE_MIME_DATABASE AND XDG_MIME AND FREEDESKTOP_MIME)
     add_test(NAME mime-types
         COMMAND "${CMAKE_COMMAND}"
                 -DMIME_XML=${CMAKE_SOURCE_DIR}/data/${TSGUI_APP_ID}.mime.xml
                 -DUPDATE_MIME_DATABASE=${UPDATE_MIME_DATABASE}
                 -DXDG_MIME=${XDG_MIME}
+                -DBASE_MIME=${FREEDESKTOP_MIME}
                 -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/mime
                 -P "${CMAKE_CURRENT_SOURCE_DIR}/CheckMimeTypes.cmake")
 endif()

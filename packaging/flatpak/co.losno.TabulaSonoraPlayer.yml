@@ -1,0 +1,106 @@
+# Flatpak build for Tabula Sonora Player.
+#
+# Why this exists alongside the Arch package: the application needs libadwaita 1.6 for
+# AdwMultiLayoutView, AdwSpinner and the accent colour API, and several distributions people
+# actually run do not have it. Ubuntu 24.04 LTS ships 1.5.0 and is supported until 2029; Debian 12
+# ships 1.2.2. A native .deb could not be built for either. The GNOME runtime carries its own
+# libadwaita, so one build reaches every distribution including those two.
+#
+#   flatpak-builder --user --install --force-clean build-flatpak \
+#       packaging/flatpak/co.losno.TabulaSonoraPlayer.yml
+#
+# Sources are taken from git rather than the working directory, so what is built is what is
+# committed -- uncommitted changes are not picked up, the same caveat the PKGBUILD carries.
+
+id: co.losno.TabulaSonoraPlayer
+runtime: org.gnome.Platform
+runtime-version: '50'
+sdk: org.gnome.Sdk
+command: tabula-sonora-player
+
+finish-args:
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --share=ipc
+  - --device=dri
+
+  # Audio out. miniaudio finds PipeWire or PulseAudio through this socket; the engine renders at
+  # 32 kHz and lets the server resample.
+  - --socket=pulseaudio
+
+  # MIDI in, and the one broad permission here.
+  #
+  # The ALSA sequencer lives at /dev/snd/seq, and flatpak has no narrower grant that reaches it --
+  # --socket=pulseaudio carries audio output only. This is a synthesizer: being playable from a
+  # keyboard is the point of it, not a convenience. Anyone who disagrees can revoke it with
+  # `flatpak override --nodevice=all co.losno.TabulaSonoraPlayer` and lose only MIDI input.
+  - --device=all
+
+  # The shell's media controls, the lock screen and headset keys.
+  - --own-name=org.mpris.MediaPlayer2.TabulaSonoraPlayer
+
+  # Read-only across the filesystem.
+  #
+  # The Open dialog and the file manager both go through the portal and would need no grant at all.
+  # The two routes that hand over a bare path do: dragging a file onto the window, and naming one on
+  # the command line. Music does not live in xdg-music -- it lives on the external disk the
+  # collection was ripped to -- so a narrow grant fails in exactly the case people have.
+  #
+  # Read-only is the whole of it: nothing is written outside the sandbox. Exporting a WAV goes
+  # through the save portal, which grants that one file, and the ROM is copied into the
+  # application's own data directory.
+  - --filesystem=host:ro
+
+modules:
+
+  # Header-only, but the engine looks for it with find_package, so it needs its CMake config
+  # installed rather than just the header dropped somewhere.
+  - name: nlohmann-json
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=RelWithDebInfo
+      - -DJSON_BuildTests=OFF
+    cleanup:
+      - '*'
+    sources:
+      - type: archive
+        url: https://github.com/nlohmann/json/archive/refs/tags/v3.12.0.tar.gz
+        sha256: 4b92eb0c06d10683f7447ce9406cb97cd4b453be18d7279320f7b2f025c10187
+
+  # A single header. The build compiles the implementation itself in one translation unit, so
+  # nothing is linked from here.
+  - name: miniaudio
+    buildsystem: simple
+    build-commands:
+      - install -Dm644 miniaudio.h /app/include/miniaudio.h
+    cleanup:
+      - '*'
+    sources:
+      - type: file
+        url: https://raw.githubusercontent.com/mackron/miniaudio/0.11.25/miniaudio.h
+        sha256: ac7af4de748b7e26b777f37e01cee313a308a7296a3eb080e2906b320cc55c89
+
+  - name: tabula-sonora-player
+    buildsystem: cmake-ninja
+    config-opts:
+      # RelWithDebInfo rather than the default: unoptimised, the synth renders only ~1.4x realtime
+      # and no ring can absorb that.
+      - -DCMAKE_BUILD_TYPE=RelWithDebInfo
+      # The engine's CLI is only built to give the test suite something to compare against, and the
+      # tests need a licensed SCCore.dll that cannot be in a build sandbox.
+      - -DTSGUI_BUILD_TESTS=OFF
+    sources:
+      # The working tree, not a git ref.
+      #
+      # A `type: git` source has to name a branch, tag or commit, and there is no value that means
+      # "whatever is checked out": a release workflow builds from a pushed tag, where the checkout
+      # is a detached HEAD and no branch name resolves. Copying the directory sidesteps the question
+      # and builds the same thing locally and in CI.
+      #
+      # `skip` keeps the build tree out of the copy, which would otherwise be gigabytes.
+      - type: dir
+        path: ../..
+        skip:
+          - build
+          - .git
+          - .cache

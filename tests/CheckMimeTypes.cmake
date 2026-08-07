@@ -11,10 +11,27 @@ file(REMOVE_RECURSE "${WORK_DIR}")
 file(MAKE_DIRECTORY "${WORK_DIR}/mime/packages" "${WORK_DIR}/files")
 file(COPY "${MIME_XML}" DESTINATION "${WORK_DIR}/mime/packages")
 
+# The system's own definitions are copied in beside ours, and the queries below then run against
+# this database *alone* -- XDG_DATA_DIRS is pointed here and nowhere else.
+#
+# Not paranoia. Once the application is installed, by package or by flatpak, its MIME package is on
+# the host, and a check that let the real database through would be reading the installed copy
+# rather than the one in the working tree: it passed happily with the file it was testing deleted.
+# Copying freedesktop.org.xml keeps the conflict this is really about -- text/x-xmi already claims
+# *.xmi -- without letting anything else in.
+file(COPY "${BASE_MIME}" DESTINATION "${WORK_DIR}/mime/packages")
+
 execute_process(COMMAND "${UPDATE_MIME_DATABASE}" "${WORK_DIR}/mime"
     RESULT_VARIABLE _built ERROR_VARIABLE _build_error OUTPUT_QUIET)
 if(NOT _built EQUAL 0)
     message(FATAL_ERROR "The MIME package would not compile:\n${_build_error}")
+endif()
+
+# Exit status is not enough. update-mime-database reports a malformed package on stderr, skips it
+# entirely, and still exits 0 -- so a stray "--" inside an XML comment silently ships a package that
+# defines nothing. The type checks below would catch it too, but not say why.
+if(_build_error MATCHES "parser error|error :")
+    message(FATAL_ERROR "The MIME package is malformed and was skipped:\n${_build_error}")
 endif()
 
 # name -> the bytes that identify it, as hex, and the type it must resolve to. The signatures are
@@ -50,7 +67,7 @@ foreach(_case IN LISTS _cases)
     execute_process(
         COMMAND "${CMAKE_COMMAND}" -E env
                 "XDG_DATA_HOME=${WORK_DIR}"
-                "XDG_DATA_DIRS=${WORK_DIR}:/usr/share"
+                "XDG_DATA_DIRS=${WORK_DIR}"
                 "${XDG_MIME}" query filetype "${WORK_DIR}/files/${_name}"
         OUTPUT_VARIABLE _actual OUTPUT_STRIP_TRAILING_WHITESPACE
         ERROR_QUIET
@@ -66,4 +83,59 @@ if(_failures)
     message(FATAL_ERROR "MIME definitions do not recognise their own formats:\n${_report}")
 endif()
 
-message(STATUS "All MIME definitions recognise their format")
+# The same question again with every magic rule removed, which is the situation inside a flatpak:
+# it strips magic from an exported MIME package rather than let a sandboxed application teach the
+# host to sniff file contents. Extensions are all that survive there, and a type whose glob ties
+# with one already in shared-mime-info loses arbitrarily -- *.xmi is claimed by text/x-xmi.
+file(REMOVE_RECURSE "${WORK_DIR}/globs")
+file(MAKE_DIRECTORY "${WORK_DIR}/globs/mime/packages")
+
+# A line range through sed rather than a regex over the whole file: CMake's regex engine is greedy
+# with no way to ask otherwise, so `<magic.*</magic>` matches from the first magic block to the last
+# and takes every mime-type between them with it.
+execute_process(
+    COMMAND sed -e "/<magic/,/<\\/magic>/d" "${MIME_XML}"
+    OUTPUT_FILE "${WORK_DIR}/globs/mime/packages/globs-only.xml"
+    RESULT_VARIABLE _stripped)
+
+if(NOT _stripped EQUAL 0)
+    message(FATAL_ERROR "Could not strip magic rules for the extension-only check")
+endif()
+
+# The base package goes in whole: flatpak strips magic from *our* export, not from the host's own
+# definitions, so text/x-xmi keeps everything it has and our glob has to out-weigh it on merit.
+file(COPY "${BASE_MIME}" DESTINATION "${WORK_DIR}/globs/mime/packages")
+
+# The strip has to leave the file intact, or this checks nothing at all -- which is exactly the trap
+# the greedy version fell into: it removed the glob it was meant to be testing and still passed.
+file(STRINGS "${WORK_DIR}/globs/mime/packages/globs-only.xml" _kept REGEX "<mime-type")
+list(LENGTH _kept _kept_count)
+file(STRINGS "${MIME_XML}" _all REGEX "<mime-type")
+list(LENGTH _all _all_count)
+
+if(NOT _kept_count EQUAL _all_count)
+    message(FATAL_ERROR
+        "Stripping magic also removed mime-type definitions: ${_kept_count} of ${_all_count} left.")
+endif()
+
+execute_process(COMMAND "${UPDATE_MIME_DATABASE}" "${WORK_DIR}/globs/mime"
+    RESULT_VARIABLE _globs_built ERROR_VARIABLE _globs_error OUTPUT_QUIET)
+
+if(NOT _globs_built EQUAL 0)
+    message(FATAL_ERROR "The magic-free MIME package would not compile:\n${_globs_error}")
+endif()
+
+execute_process(
+    COMMAND "${CMAKE_COMMAND}" -E env
+            "XDG_DATA_HOME=${WORK_DIR}/globs"
+            "XDG_DATA_DIRS=${WORK_DIR}/globs"
+            "${XDG_MIME}" query filetype "${WORK_DIR}/files/song.xmi"
+    OUTPUT_VARIABLE _xmi_by_glob OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+
+if(NOT _xmi_by_glob STREQUAL "audio/x-xmi")
+    message(FATAL_ERROR
+        "With magic stripped -- as flatpak does -- *.xmi resolves to '${_xmi_by_glob}' rather than "
+        "audio/x-xmi. The glob needs a weight above the one shared-mime-info already gives it.")
+endif()
+
+message(STATUS "All MIME definitions recognise their format, by magic and by extension alone")

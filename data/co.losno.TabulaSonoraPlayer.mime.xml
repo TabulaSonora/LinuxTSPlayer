@@ -53,13 +53,17 @@
   <mime-type type="audio/x-xmi">
     <comment>Miles extended MIDI</comment>
     <acronym>XMI</acronym>
-    <glob pattern="*.xmi"/>
-    <glob pattern="*.xmid"/>
     <!--
-      A higher priority than the default 50 on purpose: shared-mime-info already gives *.xmi to
-      text/x-xmi, so the glob alone would lose. The magic below settles it for any real file, and
-      this only decides the extension-only case.
+      Weighted above the default 50 because shared-mime-info already gives *.xmi to text/x-xmi, and
+      at equal weight the winner is arbitrary.
+
+      The weight rather than the magic below is what settles it, and that is not belt and braces:
+      flatpak strips every magic rule out of an exported MIME package (it will not let a sandboxed
+      application teach the host to sniff file contents), so inside a flatpak install the globs are
+      all that remain. A type that relied on its signature to win would quietly lose there.
     -->
+    <glob pattern="*.xmi" weight="60"/>
+    <glob pattern="*.xmid" weight="60"/>
     <magic priority="60">
       <match type="string" value="FORM" offset="0">
         <match type="string" value="XDIR" offset="8"/>
