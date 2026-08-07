@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>@TSGUI_APP_ID@</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>BSD-3-Clause</project_license>
+
+  <name>Tabula Sonora</name>
+  <summary>Play MIDI files through the Roland Sound Canvas voice</summary>
+
+  <description>
+    <p>
+      Tabula Sonora plays Standard MIDI Files through a native reimplementation of the Roland Sound
+      Canvas VA synthesizer voice — the SC-55, SC-88, SC-88Pro, SC-8820 and XG tone maps, the GS
+      send effects, and the insertion effects.
+    </p>
+    <p>
+      It reads far more than SMF: RIFF-MIDI, DirectMusic MIDS, DOOM MUS, Miles XMI, GMF, both HMI
+      containers, Mobile XMF and LDS tracker files are all converted on the way in, and the file's
+      own loop points are honoured where it declares any.
+    </p>
+    <p>
+      A mixer strip appears for each part the file addresses, showing the sounding instrument, a
+      live voice count, and mute and solo. Songs can be exported to WAV while playback continues,
+      and a MIDI keyboard can be played over a running song.
+    </p>
+    <p>
+      The synthesizer needs a copy of SCCore.dll from a licensed Roland SOUND Canvas VA
+      installation, which is not included. It is read as data and never loaded as code; the
+      application asks for it on first launch.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">@TSGUI_APP_ID@.desktop</launchable>
+
+  <provides>
+    <binary>@TSGUI_BINARY_NAME@</binary>
+  </provides>
+
+  <categories>
+    <category>AudioVideo</category>
+    <category>Audio</category>
+    <category>Player</category>
+    <category>Music</category>
+  </categories>
+
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+    <control>touch</control>
+  </supports>
+
+  <requires>
+    <display_length compare="ge">360</display_length>
+  </requires>
+
+  <content_rating type="oars-1.1"/>
+
+  <releases>
+    <release version="@PROJECT_VERSION@" date="2026-08-07">
+      <description>
+        <p>First release.</p>
+      </description>
+    </release>
+  </releases>
+</component>

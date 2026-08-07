@@ -1,0 +1,11 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "tsgui",
+  "version-string": "0.1.0",
+  "description": "A Libadwaita player for the Tabula Sonora Sound Canvas voice.",
+  "license": "BSD-3-Clause",
+  "dependencies": [
+    "miniaudio",
+    "nlohmann-json"
+  ]
+}

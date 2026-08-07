@@ -1,0 +1,244 @@
+#include "app/ts-prefs-dialog.hpp"
+
+#include "app/ts-settings.hpp"
+#include "app/ts-tone-map.hpp"
+
+#include <vector>
+
+struct _TsPrefsDialog {
+    AdwPreferencesDialog parent_instance;
+
+    TsPlayerModel* model;
+    GSettings* settings;
+
+    GtkWidget* buffer_note;
+};
+
+G_DEFINE_FINAL_TYPE(TsPrefsDialog, ts_prefs_dialog, ADW_TYPE_PREFERENCES_DIALOG)
+
+namespace {
+
+/// An AdwComboRow over a fixed set of values, bound to an integer key.
+///
+/// The row's own "selected" property is an index into its model, which is not the value we want to
+/// store -- the tone map's numbers are the module's own bank codes and polyphony is a voice count.
+/// So the mapping is explicit in both directions.
+struct ChoiceRow {
+    GSettings* settings;
+    const char* key;
+    std::vector<int> values;
+
+    /// Set while writing the row from the key, so the row's own handler does not write the key
+    /// straight back and fight whoever else is holding it.
+    bool updating = false;
+};
+
+/// Hung off the row so both handlers can reach it and it dies with the row, rather than being owned
+/// by whichever signal connection happens to be torn down last.
+ChoiceRow* choice_of(gpointer row)
+{
+    return static_cast<ChoiceRow*>(g_object_get_data(G_OBJECT(row), "ts-choice"));
+}
+
+void on_choice_selected(GObject* row, GParamSpec*, gpointer)
+{
+    auto* choice = choice_of(row);
+    if (choice->updating) {
+        return;
+    }
+
+    const guint index = adw_combo_row_get_selected(ADW_COMBO_ROW(row));
+    if (index < choice->values.size()) {
+        g_settings_set_int(choice->settings, choice->key, choice->values[index]);
+    }
+}
+
+void on_choice_key_changed(GSettings* settings, const char* key, gpointer row)
+{
+    auto* choice = choice_of(row);
+    const int value = g_settings_get_int(settings, key);
+
+    for (std::size_t i = 0; i < choice->values.size(); ++i) {
+        if (choice->values[i] == value) {
+            choice->updating = true;
+            adw_combo_row_set_selected(ADW_COMBO_ROW(row), static_cast<guint>(i));
+            choice->updating = false;
+            return;
+        }
+    }
+}
+
+AdwComboRow* add_choice(AdwPreferencesGroup* group, GSettings* settings, const char* key,
+                        const char* title, const char* subtitle,
+                        const std::vector<std::pair<const char*, int>>& options)
+{
+    auto* row = ADW_COMBO_ROW(adw_combo_row_new());
+    adw_preferences_row_set_title(ADW_PREFERENCES_ROW(row), title);
+    if (subtitle != nullptr) {
+        adw_action_row_set_subtitle(ADW_ACTION_ROW(row), subtitle);
+    }
+
+    auto* choice = new ChoiceRow{settings, key, {}, false};
+
+    GtkStringList* labels = gtk_string_list_new(nullptr);
+    for (const auto& [label, value] : options) {
+        gtk_string_list_append(labels, label);
+        choice->values.push_back(value);
+    }
+    adw_combo_row_set_model(row, G_LIST_MODEL(labels));
+
+    g_object_set_data_full(G_OBJECT(row), "ts-choice", choice,
+                           [](gpointer data) { delete static_cast<ChoiceRow*>(data); });
+
+    on_choice_key_changed(settings, key, row);
+
+    g_signal_connect(row, "notify::selected", G_CALLBACK(on_choice_selected), nullptr);
+
+    g_autofree char* detailed = g_strdup_printf("changed::%s", key);
+    g_signal_connect_object(settings, detailed, G_CALLBACK(on_choice_key_changed), row,
+                            G_CONNECT_DEFAULT);
+
+    adw_preferences_group_add(group, GTK_WIDGET(row));
+    return row;
+}
+
+AdwSwitchRow* add_switch(AdwPreferencesGroup* group, GSettings* settings, const char* key,
+                         const char* title, const char* subtitle)
+{
+    auto* row = ADW_SWITCH_ROW(adw_switch_row_new());
+    adw_preferences_row_set_title(ADW_PREFERENCES_ROW(row), title);
+    if (subtitle != nullptr) {
+        adw_action_row_set_subtitle(ADW_ACTION_ROW(row), subtitle);
+    }
+    g_settings_bind(settings, key, row, "active", G_SETTINGS_BIND_DEFAULT);
+    adw_preferences_group_add(group, GTK_WIDGET(row));
+    return row;
+}
+
+} // namespace
+
+// -- Latency -------------------------------------------------------------------------------------
+
+static void ts_prefs_dialog_update_buffer_note(TsPrefsDialog* self)
+{
+    gint64 underruns = 0;
+    g_object_get(self->model, "underruns", &underruns, nullptr);
+
+    if (underruns > 0) {
+        g_autofree char* text = g_strdup_printf(
+            g_dngettext(nullptr, "%" G_GINT64_FORMAT " dropout so far",
+                        "%" G_GINT64_FORMAT " dropouts so far", static_cast<gulong>(underruns)),
+            underruns);
+        gtk_label_set_text(GTK_LABEL(self->buffer_note), text);
+        gtk_widget_remove_css_class(self->buffer_note, "dim-label");
+        gtk_widget_add_css_class(self->buffer_note, "warning");
+    } else {
+        gtk_label_set_text(GTK_LABEL(self->buffer_note), "No dropouts");
+        gtk_widget_remove_css_class(self->buffer_note, "warning");
+        gtk_widget_add_css_class(self->buffer_note, "dim-label");
+    }
+}
+
+static void on_underruns_notify(GObject*, GParamSpec*, gpointer user_data)
+{
+    ts_prefs_dialog_update_buffer_note(TS_PREFS_DIALOG(user_data));
+}
+
+// -- Construction --------------------------------------------------------------------------------
+
+static void ts_prefs_dialog_class_init(TsPrefsDialogClass*) {}
+
+static void ts_prefs_dialog_init(TsPrefsDialog*) {}
+
+AdwDialog* ts_prefs_dialog_new(TsPlayerModel* model)
+{
+    auto* self = TS_PREFS_DIALOG(g_object_new(TS_TYPE_PREFS_DIALOG, nullptr));
+    self->model = model;
+    self->settings = ts_settings_get();
+
+    adw_dialog_set_title(ADW_DIALOG(self), "Preferences");
+
+    auto* page = ADW_PREFERENCES_PAGE(adw_preferences_page_new());
+    adw_preferences_page_set_title(page, "Engine");
+    adw_preferences_page_set_icon_name(page, "applications-engineering-symbolic");
+
+    // -- Voice --
+    auto* voice = ADW_PREFERENCES_GROUP(adw_preferences_group_new());
+    adw_preferences_group_set_title(voice, "Voice");
+
+    // Straight from the library, so a vintage added upstream appears here without being listed
+    // twice.
+    std::vector<std::pair<const char*, int>> maps;
+    for (const auto& [name, value] : ts::tone_map_choices()) {
+        (void)name;
+        maps.emplace_back(ts_tone_map_display_name(value), value);
+    }
+    add_choice(voice, self->settings, "map", "Module",
+               "Which module's tone map program changes resolve against", maps);
+
+    add_choice(voice, self->settings, "ports", "Parts", nullptr,
+               {{"16 (1 port)", 1}, {"32 (2 ports)", 2}, {"64 (4 ports)", 4}});
+
+    add_choice(voice, self->settings, "polyphony", "Polyphony", nullptr,
+               {{"64 (hardware)", 64}, {"128", 128}, {"256", 256}});
+
+    adw_preferences_page_add(page, voice);
+
+    // -- Effects --
+    auto* effects = ADW_PREFERENCES_GROUP(adw_preferences_group_new());
+    adw_preferences_group_set_title(effects, "Effects");
+    add_switch(effects, self->settings, "reverb", "Reverb", nullptr);
+    add_switch(effects, self->settings, "chorus", "Chorus", nullptr);
+    add_switch(effects, self->settings, "delay", "Delay", nullptr);
+    add_switch(effects, self->settings, "efx", "Insertion Effects", nullptr);
+    adw_preferences_page_add(page, effects);
+
+    // -- Output --
+    auto* output = ADW_PREFERENCES_GROUP(adw_preferences_group_new());
+    adw_preferences_group_set_title(output, "Output");
+
+    auto* gain_row = ADW_SPIN_ROW(adw_spin_row_new_with_range(0.0, 2.0, 0.05));
+    adw_preferences_row_set_title(ADW_PREFERENCES_ROW(gain_row), "Gain");
+    adw_action_row_set_subtitle(ADW_ACTION_ROW(gain_row), "Linear gain on the finished mix");
+    adw_spin_row_set_digits(gain_row, 2);
+    g_settings_bind(self->settings, "output-gain", gain_row, "value", G_SETTINGS_BIND_DEFAULT);
+    adw_preferences_group_add(output, GTK_WIDGET(gain_row));
+
+    adw_preferences_page_add(page, output);
+
+    // -- Latency --
+    auto* latency = ADW_PREFERENCES_GROUP(adw_preferences_group_new());
+    adw_preferences_group_set_title(latency, "Latency");
+    adw_preferences_group_set_description(
+        latency, "How far ahead the engine renders. Lower answers a keyboard sooner; raise it if "
+                 "you hear dropouts.");
+
+    auto* buffer_row = ADW_SPIN_ROW(adw_spin_row_new_with_range(10, 400, 5));
+    adw_preferences_row_set_title(ADW_PREFERENCES_ROW(buffer_row), "Buffer");
+    g_settings_bind(self->settings, "latency-ms", buffer_row, "value", G_SETTINGS_BIND_DEFAULT);
+
+    self->buffer_note = gtk_label_new("No dropouts");
+    gtk_widget_add_css_class(self->buffer_note, "caption");
+    gtk_widget_add_css_class(self->buffer_note, "dim-label");
+    gtk_widget_set_valign(self->buffer_note, GTK_ALIGN_CENTER);
+    adw_action_row_add_suffix(ADW_ACTION_ROW(buffer_row), self->buffer_note);
+
+    adw_preferences_group_add(latency, GTK_WIDGET(buffer_row));
+    adw_preferences_page_add(page, latency);
+
+    // -- MIDI --
+    auto* midi = ADW_PREFERENCES_GROUP(adw_preferences_group_new());
+    adw_preferences_group_set_title(midi, "MIDI Input");
+    add_switch(midi, self->settings, "midi-auto-connect", "Connect Every Source",
+               "Subscribe to all readable sequencer ports. Leave this off when something else is "
+               "driving the synth, or it will echo back into it.");
+    adw_preferences_page_add(page, midi);
+
+    adw_preferences_dialog_add(ADW_PREFERENCES_DIALOG(self), page);
+
+    g_signal_connect_object(model, "notify::underruns", G_CALLBACK(on_underruns_notify), self,
+                            G_CONNECT_DEFAULT);
+    ts_prefs_dialog_update_buffer_note(self);
+
+    return ADW_DIALOG(self);
+}

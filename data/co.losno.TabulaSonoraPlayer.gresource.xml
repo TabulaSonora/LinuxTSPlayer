@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+  <gresource prefix="/co/losno/TabulaSonoraPlayer">
+    <file preprocess="xml-stripblanks">ui/window.ui</file>
+  </gresource>
+
+  <!--
+    The application's own icons, carried in the binary as well as installed.
+
+    An icon theme directory only resolves once the app is installed and the cache rebuilt, which
+    leaves every development run showing the missing-image placeholder. Registering this prefix with
+    the icon theme means our marks resolve the same way in both cases. The layout below is the one
+    GtkIconTheme expects under a resource path: <size>/<context>/<name>.
+  -->
+  <gresource prefix="/co/losno/TabulaSonoraPlayer/icons/scalable/apps">
+    <file alias="co.losno.TabulaSonoraPlayer-symbolic.svg"
+          preprocess="xml-stripblanks">icons/hicolor/symbolic/apps/co.losno.TabulaSonoraPlayer-symbolic.svg</file>
+  </gresource>
+
+  <gresource prefix="/co/losno/TabulaSonoraPlayer/icons/256x256/apps">
+    <file alias="co.losno.TabulaSonoraPlayer.png">icons/hicolor/256x256/apps/co.losno.TabulaSonoraPlayer.png</file>
+  </gresource>
+</gresources>

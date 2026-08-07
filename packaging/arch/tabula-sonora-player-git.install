@@ -1,0 +1,20 @@
+post_install() {
+    cat <<'EOF'
+
+Tabula Sonora needs a copy of SCCore.dll from a licensed Roland SOUND Canvas VA
+1.1.6 installation. It is not distributed with this package and cannot be: it is
+Roland's, and it holds the 24 MB wave ROM the synthesizer voice is built from.
+
+The file is read as data and never loaded as code. The application asks for it on
+first launch and keeps its own verified copy under ~/.local/share/tabula-sonora/.
+
+The build it accepts is exactly 27,347,456 bytes,
+SHA-256 117e6aa147a96fbde5e10d2caf16c89965acc1e44235fd245992216cc620bdb1.
+Any other build has its tables at different offsets and is refused.
+
+EOF
+}
+
+post_upgrade() {
+    :
+}

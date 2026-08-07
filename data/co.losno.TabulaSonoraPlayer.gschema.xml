@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <!--
+    One key per field rather than a serialised settings blob, which is the Apple front end's
+    deliberate choice and worth keeping: a field added later falls back to its own default instead
+    of invalidating everything that was stored beside it.
+
+    The defaults are the engine's own (ts::ToneGeneratorOptions), so a fresh profile sounds like
+    `tabula-sonora render` with no arguments.
+  -->
+  <schema id="co.losno.TabulaSonoraPlayer" path="/co/losno/TabulaSonoraPlayer/">
+
+    <key name="map" type="i">
+      <default>4</default>
+      <summary>Tone map</summary>
+      <description>
+        Which module's tone map program changes resolve against, as ts::ToneMap: 1 SC-55, 2 SC-88,
+        3 SC-88Pro, 4 SC-8820, 119 XG.
+      </description>
+    </key>
+
+    <key name="polyphony" type="i">
+      <range min="1" max="1024"/>
+      <default>64</default>
+      <summary>Voices before stealing</summary>
+      <description>The hardware's own limit is 64.</description>
+    </key>
+
+    <key name="ports" type="i">
+      <range min="1" max="4"/>
+      <default>2</default>
+      <summary>MIDI ports</summary>
+      <description>1, 2 or 4, giving 16, 32 or 64 parts. The module has two.</description>
+    </key>
+
+    <key name="reverb" type="b"><default>true</default><summary>Reverb send</summary></key>
+    <key name="chorus" type="b"><default>true</default><summary>Chorus send</summary></key>
+    <key name="delay" type="b"><default>true</default><summary>System delay</summary></key>
+    <key name="efx" type="b"><default>true</default><summary>Insertion effects</summary></key>
+
+    <key name="output-gain" type="d">
+      <range min="0.0" max="2.0"/>
+      <default>1.0</default>
+      <summary>Linear gain on the finished mix</summary>
+    </key>
+
+    <key name="latency-ms" type="i">
+      <range min="10" max="400"/>
+      <default>40</default>
+      <summary>How far ahead of the device to render</summary>
+      <description>
+        Lower answers a keyboard sooner; raise it if you hear dropouts. Changing it never
+        reallocates the ring, so it is safe to drag while playing.
+      </description>
+    </key>
+
+    <key name="looping" type="b">
+      <default>false</default>
+      <summary>Repeat at the file's own loop points</summary>
+    </key>
+
+    <key name="midi-auto-connect" type="b">
+      <default>false</default>
+      <summary>Subscribe to every readable ALSA sequencer port</summary>
+      <description>
+        Convenient with one keyboard attached, and wrong on a machine running a sequencer, where it
+        would echo everything back into the synth.
+      </description>
+    </key>
+
+    <key name="rom-verified" type="b">
+      <default>false</default>
+      <summary>Whether the stored ROM has passed a full hash</summary>
+      <description>
+        Once true, later launches check only size and PE timestamp, which is all a file already
+        verified once needs.
+      </description>
+    </key>
+
+    <key name="window-width" type="i"><default>700</default></key>
+    <key name="window-height" type="i"><default>720</default></key>
+    <key name="window-maximized" type="b"><default>false</default></key>
+
+  </schema>
+</schemalist>

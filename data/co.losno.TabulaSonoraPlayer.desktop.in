@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=Tabula Sonora
+GenericName=MIDI Player
+Comment=Play MIDI files through the Roland Sound Canvas voice
+Categories=AudioVideo;Audio;Player;Music;
+Keywords=MIDI;SMF;Sound Canvas;SC-88;SC-8820;GS;XG;synthesizer;
+Exec=@TSGUI_BINARY_NAME@ %f
+Icon=@TSGUI_APP_ID@
+Terminal=false
+StartupNotify=true
+DBusActivatable=false
+MimeType=audio/midi;audio/x-midi;audio/rmid;audio/x-mus;audio/x-xmi;audio/x-gmf;audio/x-hmi;audio/x-hmp;audio/x-mids;audio/x-lds;audio/x-xmf;audio/mobile-xmf;

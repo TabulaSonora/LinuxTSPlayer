@@ -1,0 +1,97 @@
+# Maintainer: Kevin <anthropic@kddlb.cl>
+
+# Point this at a published repository, or at a local checkout to build what is on this machine:
+#
+#   _repo="file:///path/to/your/LinuxTSPlayer"
+#
+# A file:// source still has to be a git repository with at least one commit; makepkg clones it
+# rather than copying the working tree, so uncommitted changes are not picked up.
+_repo="https://github.com/TabulaSonora/LinuxTSPlayer.git"
+
+_pkgname=tabula-sonora-player
+# Spelled out rather than "${_pkgname}-git": the -git suffix is what tells both a reader and a
+# static checker that the sources deliberately track upstream HEAD, and it should not need a
+# variable expanded before that is visible.
+pkgname=tabula-sonora-player-git
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Play MIDI files through a native reimplementation of the Roland Sound Canvas VA voice"
+arch=('x86_64' 'aarch64')
+url="https://github.com/TabulaSonora/LinuxTSPlayer"
+license=('BSD-3-Clause')
+
+# gtk4 and libadwaita for the interface, alsa-lib for MIDI input, zlib for the engine's
+# deflate-packed XMF reader.
+#
+# Notably absent: flac, libvorbis and libogg. The engine links them when pkg-config can find them,
+# purely for compressed SoundFont export, which this player never calls -- so the build deliberately
+# hides them from it and the binary carries no reference to any of the three. See the comment on
+# PKG_CONFIG_LIBDIR in the top-level CMakeLists.txt.
+depends=(
+    'alsa-lib'
+    'gcc-libs'
+    'glibc'
+    'gtk4'
+    'libadwaita'
+    'zlib'
+)
+
+makedepends=(
+    'cmake'
+    'git'
+    'miniaudio'
+    'nlohmann-json'
+    'ninja'
+)
+
+provides=("${_pkgname}=${pkgver}")
+conflicts=("${_pkgname}")
+options=('!lto')
+install="${pkgname}.install"
+
+# The engine is a separate repository, taken as a sibling checkout rather than a submodule so the
+# build does not need --recurse-submodules and the two can be pinned independently.
+source=(
+    "${_pkgname}::git+${_repo}"
+    "nativets::git+https://github.com/TabulaSonora/NativeTS.git"
+)
+sha256sums=('SKIP' 'SKIP')
+
+pkgver() {
+    cd "${srcdir}/${_pkgname}"
+    # Tagged releases read as 0.1.0.r12.gabc1234; an untagged tree falls back to a plain count.
+    git describe --long --tags 2>/dev/null | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g' \
+        || printf "0.0.0.r%s.g%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+}
+
+build() {
+    # CMAKE_BUILD_TYPE=None so makepkg's own CFLAGS are used rather than CMake's.
+    #
+    # Two of the engine's flags are not tuning and arrive through its exported interface target
+    # regardless: -fwrapv, because its control path is 16-bit fixed point and relies on wrapping,
+    # and -ffp-contract=off, because its float narrowing guarantees break if the compiler fuses
+    # a*b+c into an FMA. Never add -ffast-math to CFLAGS for this package.
+    #
+    # LTO is off for the same reason: it has no measurable benefit here and every cross-module
+    # transformation is another chance to alter the arithmetic the engine is validated against.
+    cmake -S "${_pkgname}" -B build -G Ninja \
+        -DCMAKE_BUILD_TYPE=None \
+        -DCMAKE_INSTALL_PREFIX=/usr \
+        -DCMAKE_INSTALL_LIBDIR=lib \
+        -DTSGUI_NATIVETS_DIR="${srcdir}/nativets" \
+        -DTSGUI_BUILD_TESTS=OFF
+
+    cmake --build build
+}
+
+package() {
+    DESTDIR="${pkgdir}" cmake --install build
+
+    # The engine's own notice covers the Roland-derived reverb and chorus coefficients compiled
+    # into it, and has to travel with any binary that carries them. The build installs it beside
+    # the licence; this only checks that it did.
+    if [ ! -f "${pkgdir}/usr/share/licenses/${_pkgname}/NOTICE.md" ]; then
+        echo "NOTICE.md is missing from the package" >&2
+        return 1
+    fi
+}
