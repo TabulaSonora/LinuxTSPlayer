@@ -22,6 +22,7 @@ extern "C" TSEngineSettings TSEngineSettingsDefault(void)
     settings.chorus = defaults.chorus;
     settings.delay = defaults.delay;
     settings.efx = defaults.efx;
+    settings.extendedInterpolation = defaults.extended_interpolation;
     settings.outputGain = defaults.output_gain;
     return settings;
 }
@@ -423,6 +424,7 @@ ToneGeneratorOptions Session::options() const
     options.chorus = settings_.chorus;
     options.delay = settings_.delay;
     options.efx = settings_.efx;
+    options.extended_interpolation = settings_.extendedInterpolation;
     options.output_gain = settings_.outputGain;
     options.channels = &channels_;
     return options;

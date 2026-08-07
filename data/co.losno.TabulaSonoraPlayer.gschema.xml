@@ -33,6 +33,16 @@
       <description>1, 2 or 4, giving 16, 32 or 64 parts. The module has two.</description>
     </key>
 
+    <key name="extended-interpolation" type="b">
+      <default>true</default>
+      <summary>Extended interpolation</summary>
+      <description>
+        The wide band-limiting resampler, and with it the removal of the module's pitch increment
+        ceiling. On is the engine's own default and the one place it knowingly departs from
+        SCCore.dll; off reproduces the module exactly, aliasing and stalled glides included.
+      </description>
+    </key>
+
     <key name="reverb" type="b"><default>true</default><summary>Reverb send</summary></key>
     <key name="chorus" type="b"><default>true</default><summary>Chorus send</summary></key>
     <key name="delay" type="b"><default>true</default><summary>System delay</summary></key>

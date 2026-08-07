@@ -27,6 +27,7 @@ void apply(GSettings* settings, TsPlayerModel* model)
     engine.chorus = g_settings_get_boolean(settings, "chorus");
     engine.delay = g_settings_get_boolean(settings, "delay");
     engine.efx = g_settings_get_boolean(settings, "efx");
+    engine.extendedInterpolation = g_settings_get_boolean(settings, "extended-interpolation");
     engine.outputGain = g_settings_get_double(settings, "output-gain");
 
     ts_player_model_apply_settings(model, engine);

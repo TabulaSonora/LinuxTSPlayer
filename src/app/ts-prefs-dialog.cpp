@@ -182,6 +182,13 @@ AdwDialog* ts_prefs_dialog_new(TsPlayerModel* model)
     add_choice(voice, self->settings, "polyphony", "Polyphony", nullptr,
                {{"64 (hardware)", 64}, {"128", 128}, {"256", 256}});
 
+    // The one setting here that is not a choice between two things the module does: it is a choice
+    // between the module and the machine the module models. Worded from the side that is off by
+    // default, because "on" is simply the engine behaving well and needs no explaining.
+    add_switch(voice, self->settings, "extended-interpolation", "Extended Interpolation",
+               "A wide band-limiting resampler with no pitch ceiling. Turn it off to reproduce "
+               "SCCore.dll exactly, including its aliasing and the glides it stalls.");
+
     adw_preferences_page_add(page, voice);
 
     // -- Effects --

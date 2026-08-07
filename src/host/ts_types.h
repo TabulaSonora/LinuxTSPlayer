@@ -43,6 +43,16 @@ typedef struct {
     bool delay;
     bool efx;
 
+    /// The wide band-limiting resampler, and with it the removal of the module's pitch increment
+    /// ceiling.
+    ///
+    /// On by default, and the one place the engine knowingly departs from `SCCore.dll`: the
+    /// module's 4-tap kernel saturates at four times a wave's native rate, which pins a portamento
+    /// glide that begins high enough and leaves it motionless until it has descended past the
+    /// ceiling. Off reproduces the module exactly, aliasing and all -- which is what anything being
+    /// compared against the DLL needs.
+    bool extendedInterpolation;
+
     /// Linear gain on the finished mix. Applied live, without a rebuild.
     double outputGain;
 } TSEngineSettings;
