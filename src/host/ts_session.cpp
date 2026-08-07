@@ -136,11 +136,18 @@ void Session::unload_song()
 void Session::set_settings(const TSEngineSettings& settings)
 {
     // Gain is live; everything else lives in the construction options and needs a new generator.
+    //
+    // Extended interpolation belongs in this list even though nothing about the generator's *shape*
+    // changes with it: `ToneGenerator` copies it out of its options into each voice's setup at
+    // note-on and offers no setter, so a session that only stored the new value would go on
+    // sounding the old kernel for as long as the generator lived -- the toggle would appear to do
+    // nothing until some other setting happened to rebuild, and then take effect retroactively.
     const bool structural = settings.map != settings_.map
                             || settings.polyphony != settings_.polyphony
                             || settings.ports != settings_.ports || settings.reverb != settings_.reverb
                             || settings.chorus != settings_.chorus || settings.delay != settings_.delay
-                            || settings.efx != settings_.efx;
+                            || settings.efx != settings_.efx
+                            || settings.extendedInterpolation != settings_.extendedInterpolation;
 
     settings_ = settings;
 
