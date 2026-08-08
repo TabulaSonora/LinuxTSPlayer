@@ -117,7 +117,7 @@ void Session::load_song(const std::string& path)
     // Taken from the same bytes, after the parse rather than before it: `smf::load` is what decides
     // whether this file is playable at all, and a file it throws on should not leave a half-filled
     // information window behind describing something that never loaded.
-    song_info_ = read_song_info(bytes, file_name(path));
+    song_info_ = read_song_info(bytes, file_name(path), sample_rate);
     song_info_.length = song_length_;
     if (song_loop_) {
         song_info_.has_loop = true;

@@ -46,6 +46,17 @@ enum class TextEncoding {
     cp1252,
 };
 
+/// A marker meta event, and where in the song it falls.
+struct SongMarker {
+    std::string text;
+
+    /// Frames at the engine's rate, so this can be handed straight to a seek.
+    ///
+    /// Converted from the file's ticks through its own tempo map, which is why the walk that finds
+    /// these has to read delta times it otherwise has no use for.
+    std::int64_t position = 0;
+};
+
 /// One track of the file, in the order the file stores them.
 struct SongTrack {
     /// 1-based, counting every MTrk including a format-1 tempo track that plays nothing.
@@ -128,8 +139,13 @@ struct SongInfo {
     /// is common and listing it seventeen times is not information.
     std::vector<std::string> text;
 
-    /// FF 06, Marker, minus the ones that only exist to mark the loop. Deduplicated the same way.
-    std::vector<std::string> markers;
+    /// FF 06, Marker, minus the ones that only exist to mark the loop, ordered by position.
+    ///
+    /// *Not* deduplicated by text, unlike `text` above, and the difference is the position: a file
+    /// that marks "Verse 1" twice is marking two places, and collapsing them would lose the second.
+    /// Only an exact repeat -- same text at the same tick, which is what a file writing its markers
+    /// onto two tracks produces -- is dropped.
+    std::vector<SongMarker> markers;
 
     /// The lyric sheet, as text, with no timing.
     ///
@@ -182,7 +198,10 @@ struct SongInfo {
 ///
 /// `name` is the file name the bytes came from, needed for the same reason `smf::load` needs it:
 /// the Loudness Sound System format has no magic and is recognised by its extension alone.
-[[nodiscard]] SongInfo read_song_info(std::span<const std::uint8_t> data, const std::string& name);
+/// `sample_rate` is what marker positions are expressed in, and defaults to the engine's own, so
+/// they can be handed to a seek without conversion.
+[[nodiscard]] SongInfo read_song_info(std::span<const std::uint8_t> data, const std::string& name,
+                                      int sample_rate = 32000);
 
 /// The display name of a vintage: "SC-88", "General MIDI", or empty when nothing was stated.
 [[nodiscard]] std::string vintage_name(SongVintage vintage);

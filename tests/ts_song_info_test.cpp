@@ -132,6 +132,40 @@ SongInfo read(const Bytes& bytes, const std::string& name = "test.mid")
     return read_song_info(bytes, name);
 }
 
+std::vector<std::string> marker_texts(const SongInfo& info)
+{
+    std::vector<std::string> texts;
+    texts.reserve(info.markers.size());
+    for (const auto& marker : info.markers) {
+        texts.push_back(marker.text);
+    }
+    return texts;
+}
+
+/// A delta time as a variable-length quantity: seven bits per byte, high bit set on all but the
+/// last. Anything from 128 up needs more than one byte, and 480 ticks -- a quarter note at the
+/// usual division -- is already over it.
+Bytes variable_length(int value)
+{
+    Bytes reversed;
+    reversed.push_back(static_cast<std::uint8_t>(value & 0x7F));
+    value >>= 7;
+    while (value > 0) {
+        reversed.push_back(static_cast<std::uint8_t>((value & 0x7F) | 0x80));
+        value >>= 7;
+    }
+    return Bytes{reversed.rbegin(), reversed.rend()};
+}
+
+/// A meta event at a given delta, for the cases where *when* is the thing under test.
+Bytes meta_at(int delta, std::uint8_t type, const std::string& payload)
+{
+    Bytes out = variable_length(delta);
+    append(out, Bytes{0xFF, type, static_cast<std::uint8_t>(payload.size())});
+    append_text(out, payload);
+    return out;
+}
+
 // -- The cases ---------------------------------------------------------------------------------
 
 void test_names_and_text()
@@ -204,7 +238,8 @@ void test_running_status_survives_a_meta_event()
     const SongInfo info = read(file(1, {track(events)}));
 
     check_equal(info.tracks.at(0).notes, 3, "running status resumes across a meta event");
-    check_equal(info.markers, (std::vector<std::string>{"Verse 1"}), "and the meta was still read");
+    check_equal(marker_texts(info), (std::vector<std::string>{"Verse 1"}),
+                "and the meta was still read");
 }
 
 void test_meta_status_never_becomes_running()
@@ -289,8 +324,118 @@ void test_markers_exclude_loop_keywords()
 
     const SongInfo info = read(file(1, {track(events)}));
 
-    check_equal(info.markers, (std::vector<std::string>{"Verse 1", "Chorus"}),
+    check_equal(marker_texts(info), (std::vector<std::string>{"Verse 1", "Chorus"}),
                 "loop markers are the loop, not markers");
+}
+
+void test_lyrics_written_as_markers()
+{
+    // A third karaoke dialect: the words in FF 06 Marker, one syllable at a time, keeping Soft
+    // Karaoke's line breaks. Read as section markers it is hundreds of one-word rows and a lyrics
+    // page claiming the file has none.
+    Bytes events;
+    for (const char* piece : {"/For", " all", " those", " times", "/you", " stood", " by", " me",
+                              "/and", " all", " the", " truth", "/that", " you", " made", " me",
+                              " see"}) {
+        append(events, meta_at(60, 0x06, piece));
+    }
+
+    const SongInfo info = read(file(1, {track(events)}, 480));
+
+    check_equal(info.lyrics,
+                std::string{"For all those times\nyou stood by me\nand all the truth\nthat you "
+                            "made me see"},
+                "markers carrying the words become the lyric sheet");
+    check(info.markers.empty(), "and are not also listed as places to jump to");
+}
+
+void test_section_markers_are_not_mistaken_for_lyrics()
+{
+    // The other side of that test, and the one with more at stake: a real section list must survive
+    // however long it is. Nothing about a marker's length or wording is evidence -- only the line
+    // break characters are.
+    Bytes events;
+    for (const char* piece : {"Prelude", "Verse 1", "Interlude", "Verse 2", "CHORUS 1", "Verse 3",
+                              "Interlude 2", "CHORUS 2", "Bridge", "Verse 4", "CHORUS 3", "Coda"}) {
+        append(events, meta_at(60, 0x06, piece));
+    }
+
+    const SongInfo info = read(file(1, {track(events)}, 480));
+
+    check_equal(info.markers.size(), std::size_t{12}, "a long section list stays a section list");
+    check(info.lyrics.empty(), "and is not read as a lyric sheet");
+}
+
+void test_marker_positions()
+{
+    // 480 ticks per quarter at 120 bpm is half a second a quarter note, so a marker two quarters in
+    // falls at one second: 32,000 frames.
+    Bytes events;
+    append(events, meta_raw(0x51, {0x07, 0xA1, 0x20})); // 500000 us -> 120 bpm
+    append(events, meta_at(0, 0x06, "Top"));
+    append(events, meta_at(120, 0x06, "Quarter"));   // +0.125 s
+    append(events, meta_at(840, 0x06, "Two Bars"));  // +0.875 s, so 1.0 s in total
+
+    const SongInfo info = read(file(1, {track(events)}, 480));
+
+    check_equal(info.markers.size(), std::size_t{3}, "three markers");
+    check_equal(info.markers.at(0).position, std::int64_t{0}, "the first is at the top");
+    check_equal(info.markers.at(1).position, std::int64_t{4000}, "an eighth of a second in");
+    check_equal(info.markers.at(2).position, std::int64_t{32000}, "one second in");
+}
+
+void test_marker_positions_follow_a_tempo_change()
+{
+    // The reason ticks cannot simply be scaled: the file halves its tempo partway, so the second
+    // marker is twice as far away in time as its tick distance suggests. 480 ticks at 120 bpm is
+    // 0.5 s; the next 480 at 60 bpm is 1.0 s.
+    Bytes events;
+    append(events, meta_raw(0x51, {0x07, 0xA1, 0x20}));       // 120 bpm
+    append(events, meta_at(480, 0x51, std::string("\x0f\x42\x40", 3))); // 1000000 us -> 60 bpm
+    append(events, meta_at(0, 0x06, "Halved"));
+    append(events, meta_at(480, 0x06, "After"));
+
+    const SongInfo info = read(file(1, {track(events)}, 480));
+
+    check_equal(info.markers.at(0).position, std::int64_t{16000}, "half a second at 120 bpm");
+    check_equal(info.markers.at(1).position, std::int64_t{48000}, "a further second at 60 bpm");
+}
+
+void test_markers_from_several_tracks_merge_in_order()
+{
+    // A conductor track carrying the tempo map, stored *after* the track carrying the markers --
+    // which is why the conversion cannot happen as the walk goes.
+    Bytes marks;
+    append(marks, meta_at(480, 0x06, "Second"));
+    append(marks, meta_at(480, 0x06, "Third"));
+
+    Bytes conductor;
+    append(conductor, meta_raw(0x51, {0x07, 0xA1, 0x20}));
+    append(conductor, meta_at(0, 0x06, "First"));
+
+    const SongInfo info = read(file(1, {track(marks), track(conductor)}, 480));
+
+    check_equal(marker_texts(info), (std::vector<std::string>{"First", "Second", "Third"}),
+                "markers from every track, ordered by where they fall");
+    check_equal(info.markers.at(1).position, std::int64_t{16000}, "against the later tempo map");
+}
+
+void test_repeated_marker_text_is_kept_when_it_moves()
+{
+    // Two tracks stamping the same marker on the same tick is one place; the same words later is
+    // another, and collapsing by text alone would lose it.
+    Bytes one;
+    append(one, meta_at(0, 0x06, "Chorus"));
+    append(one, meta_at(480, 0x06, "Bridge"));
+    append(one, meta_at(480, 0x06, "Chorus"));
+
+    Bytes two;
+    append(two, meta_at(0, 0x06, "Chorus")); // the same place, from another track
+
+    const SongInfo info = read(file(1, {track(one), track(two)}, 480));
+
+    check_equal(marker_texts(info), (std::vector<std::string>{"Chorus", "Bridge", "Chorus"}),
+                "an exact repeat is dropped, a later repeat is not");
 }
 
 // -- Vintage -------------------------------------------------------------------------------------
@@ -455,6 +600,12 @@ int main()
     test_lyrics_from_lyric_meta();
     test_soft_karaoke();
     test_markers_exclude_loop_keywords();
+    test_lyrics_written_as_markers();
+    test_section_markers_are_not_mistaken_for_lyrics();
+    test_marker_positions();
+    test_marker_positions_follow_a_tempo_change();
+    test_markers_from_several_tracks_merge_in_order();
+    test_repeated_marker_text_is_kept_when_it_moves();
     test_vintage();
     test_encoding();
     test_malformed();

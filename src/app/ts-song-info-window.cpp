@@ -116,6 +116,7 @@ AdwActionRow* value_row(const char* title, const char* value)
     gtk_widget_set_hexpand(label, TRUE);
 
     adw_action_row_add_suffix(row, label);
+    gtk_list_box_row_set_activatable(GTK_LIST_BOX_ROW(row), FALSE);
     return row;
 }
 
@@ -138,6 +139,55 @@ AdwActionRow* text_row(const char* body)
     adw_preferences_row_set_title(ADW_PREFERENCES_ROW(row), body);
     adw_preferences_row_set_title_selectable(ADW_PREFERENCES_ROW(row), TRUE);
     adw_action_row_set_title_lines(row, 0);
+    // A list box row is activatable by default, which would light this up under the pointer and
+    // then do nothing -- the affordance of a button with none of the behaviour. Only the markers
+    // earn that, because only they go anywhere.
+    gtk_list_box_row_set_activatable(GTK_LIST_BOX_ROW(row), FALSE);
+    return row;
+}
+
+/// Where a row's seek target is kept, in seconds.
+///
+/// Hung off the row rather than held in a struct the callback owns, so it dies with the row instead
+/// of outliving it -- the page is torn down and rebuilt whenever the file changes, and a heap
+/// allocation per marker would have to be tracked through that.
+constexpr const char* seek_key = "ts-seek-seconds";
+
+void on_marker_activated(AdwActionRow* row, gpointer user_data)
+{
+    auto* model = TS_PLAYER_MODEL(user_data);
+    const auto* seconds = static_cast<const double*>(g_object_get_data(G_OBJECT(row), seek_key));
+    if (seconds != nullptr) {
+        ts_player_model_seek(model, *seconds);
+    }
+}
+
+/// A marker: what it says, where it falls, and a jump to it.
+///
+/// Activatable, because a marker whose position is known and cannot be reached is a label rather
+/// than a place -- "Chorus" is worth showing mostly because it is worth going to. Seeking only, not
+/// seek-and-play: the transport keeps whatever state it had, so this scrubs a paused song and jumps
+/// a playing one, which is what a scrubber does and what the row is standing in for.
+AdwActionRow* marker_row(TsPlayerModel* model, const char* body, std::int64_t frames)
+{
+    auto* row = ADW_ACTION_ROW(adw_action_row_new());
+    adw_preferences_row_set_title(ADW_PREFERENCES_ROW(row), body);
+    adw_action_row_set_title_lines(row, 0);
+
+    const double seconds = static_cast<double>(frames) / ts::host::Session::sample_rate;
+    GtkWidget* stamp = gtk_label_new(clock_text(seconds).c_str());
+    gtk_widget_add_css_class(stamp, "dim-label");
+    gtk_widget_add_css_class(stamp, "numeric");
+    gtk_widget_set_valign(stamp, GTK_ALIGN_CENTER);
+    adw_action_row_add_suffix(row, stamp);
+
+    gtk_list_box_row_set_activatable(GTK_LIST_BOX_ROW(row), TRUE);
+    adw_action_row_add_suffix(row, gtk_image_new_from_icon_name("go-next-symbolic"));
+
+    g_object_set_data_full(G_OBJECT(row), seek_key, new double{seconds},
+                           [](gpointer held) { delete static_cast<double*>(held); });
+    g_signal_connect_object(row, "activated", G_CALLBACK(on_marker_activated), model,
+                            G_CONNECT_DEFAULT);
     return row;
 }
 
@@ -180,7 +230,7 @@ std::string container_text(const SongInfo& info)
 /// The page is a pure function of the file's own metadata plus the module setting -- it reads no
 /// model property, which is what keeps it from picking up the previous song's values when it is
 /// rebuilt from `notify::song-name`.
-void build_song_page(AdwPreferencesPage* page, const SongInfo& info)
+void build_song_page(AdwPreferencesPage* page, const SongInfo& info, TsPlayerModel* model)
 {
     // No "Name" row: the window's own subtitle already carries the file name, and repeating it as
     // the first row of the first group says the same thing twice on one screen.
@@ -257,9 +307,10 @@ void build_song_page(AdwPreferencesPage* page, const SongInfo& info)
 
     if (!info.markers.empty()) {
         auto* marker_group = new_group(page, "Markers");
-        for (const std::string& marker : info.markers) {
-            g_autofree char* markup = to_markup(marker, info.encoding);
-            adw_preferences_group_add(marker_group, GTK_WIDGET(text_row(markup)));
+        for (const auto& marker : info.markers) {
+            g_autofree char* markup = to_markup(marker.text, info.encoding);
+            adw_preferences_group_add(
+                marker_group, GTK_WIDGET(marker_row(model, markup, marker.position)));
         }
     }
 }
@@ -380,7 +431,7 @@ void rebuild(TsSongInfoWindow* self)
     const SongInfo& info = ts_player_model_get_song_info(self->model);
 
     auto* song = new_scrolling_page();
-    build_song_page(song, info);
+    build_song_page(song, info, self->model);
     adw_view_stack_add_titled_with_icon(self->pages, GTK_WIDGET(song), "song", "Song",
                                         "dialog-information-symbolic");
 

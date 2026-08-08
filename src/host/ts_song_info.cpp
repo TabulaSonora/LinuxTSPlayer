@@ -1,14 +1,19 @@
 #include "host/ts_song_info.hpp"
 
 #include "tabulasonora/midi_formats.hpp"
+#include "tabulasonora/smf_reader.hpp"
 
 #include <algorithm>
 #include <array>
 #include <cstddef>
+#include <utility>
 
 namespace ts::host {
 
 namespace {
+
+/// The tempo a file is at before it sets one: 120 bpm, the engine's own default.
+constexpr std::uint32_t default_tempo = static_cast<std::uint32_t>(smf::default_tempo);
 
 // -- Byte-level reading ---------------------------------------------------------------------------
 //
@@ -382,6 +387,132 @@ bool is_loop_marker(const std::string& marker)
     return key == "loopstart" || key == "loopend" || key == "start";
 }
 
+/// Whether a file's markers are really a lyric sheet.
+///
+/// A third karaoke dialect, after FF 05 and Soft Karaoke's FF 01: some sequencers write the words
+/// into FF 06 Marker instead, one syllable per event, keeping Soft Karaoke's convention that `\`
+/// starts a paragraph and `/` a line. Nothing but the type distinguishes them, and reading them as
+/// section markers is badly wrong in both directions -- the lyrics page says the file has none while
+/// the markers list runs to 801 rows of "Da", "le", "a", "tu", "cuer", "po", one of which is a
+/// clickable seek to the syllable.
+///
+/// The line-break prefixes are the tell, and they are the *only* thing trusted here. A section
+/// marker is called "Verse 2", never "/For" or "\Da", so a run of them carrying those prefixes is a
+/// lyric stream. Several rather than one, so a lone oddly-named marker cannot take the list with it,
+/// and the share is set low because a sheet breaks a line only every eight or ten syllables -- the
+/// lowest genuine ratio measured over the corpus was one marker in twenty-three.
+///
+/// Nothing is inferred from the *shape* of the markers, and that is a decision with evidence behind
+/// it rather than caution. Files exist -- Tune 1000's, mostly -- that hold a lyric sheet as hundreds
+/// of one-word markers with no break characters at all, and they cannot be told apart from a real
+/// section list by length, count or word shape: a rule tuned to catch them flagged 163 of 225
+/// marker-heavy files, and the ones it caught were "Verse 1", "Interlude", "Full Chorus 1",
+/// "Variation 1" -- precisely the markers worth showing. So those files list their words, each
+/// correctly stamped and each seekable, which is at worst a long list of true things.
+bool markers_are_lyrics(const std::vector<std::string>& markers)
+{
+    if (markers.size() < 8) {
+        return false;
+    }
+    const auto broken = static_cast<std::size_t>(
+        std::count_if(markers.begin(), markers.end(), [](const std::string& text) {
+            return !text.empty() && (text.front() == '\\' || text.front() == '/');
+        }));
+    return broken >= 4 && broken * 32 >= markers.size();
+}
+
+// -- The tempo map ---------------------------------------------------------------------------------
+
+/// One tempo change, in ticks.
+struct TempoChange {
+    std::int64_t tick = 0;
+    /// Microseconds per quarter note.
+    std::uint32_t microseconds = default_tempo;
+};
+
+/// Turns a tick into a frame position, through the tempo changes the file declares.
+///
+/// A marker's tick means nothing on its own -- a file that halves its tempo halfway through puts
+/// its later markers at twice the distance the tick count suggests -- so every change before the
+/// target has to be walked. The seconds elapsed at each change are accumulated once and the lookup
+/// is then a scan of a short, sorted list; files here carry a handful of tempo changes, and the
+/// worst in the corpus is still small enough that a binary search would buy nothing.
+class TempoMap {
+public:
+    TempoMap(std::vector<TempoChange> changes, int division) : division_{division}
+    {
+        // Ticks are only comparable across tracks because they share an origin, so a format-1
+        // file's conductor track and its parts agree. Sorting is stable so two changes stamped on
+        // the same tick resolve in the order the file stored them, which is the order the engine
+        // would have applied them in.
+        std::stable_sort(changes.begin(), changes.end(),
+                         [](const TempoChange& a, const TempoChange& b) { return a.tick < b.tick; });
+
+        double seconds = 0.0;
+        std::int64_t previous_tick = 0;
+        std::uint32_t previous_tempo = default_tempo;
+        entries_.reserve(changes.size());
+        for (const TempoChange& change : changes) {
+            seconds += span_seconds(change.tick - previous_tick, previous_tempo);
+            entries_.push_back(Entry{change.tick, seconds, change.microseconds});
+            previous_tick = change.tick;
+            previous_tempo = change.microseconds;
+        }
+    }
+
+    [[nodiscard]] double seconds_at(std::int64_t tick) const
+    {
+        // SMPTE timing has no ticks per quarter note and no tempo map to walk. The engine refuses
+        // those files outright, so nothing that reaches a window is one; returning zero rather
+        // than dividing by it is what keeps this callable on its own.
+        if (division_ <= 0) {
+            return 0.0;
+        }
+
+        double seconds = 0.0;
+        std::int64_t base_tick = 0;
+        std::uint32_t tempo = default_tempo;
+        for (const Entry& entry : entries_) {
+            if (entry.tick > tick) {
+                break;
+            }
+            seconds = entry.seconds;
+            base_tick = entry.tick;
+            tempo = entry.microseconds;
+        }
+        return seconds + span_seconds(tick - base_tick, tempo);
+    }
+
+private:
+    struct Entry {
+        std::int64_t tick = 0;
+        double seconds = 0.0;
+        std::uint32_t microseconds = default_tempo;
+    };
+
+    [[nodiscard]] double span_seconds(std::int64_t ticks, std::uint32_t microseconds) const
+    {
+        if (division_ <= 0 || ticks <= 0) {
+            return 0.0;
+        }
+        return static_cast<double>(ticks) * static_cast<double>(microseconds)
+               / (1'000'000.0 * static_cast<double>(division_));
+    }
+
+    std::vector<Entry> entries_;
+    int division_ = 0;
+};
+
+/// Seconds to frames, clamped at zero. Not quantised onto the engine's block grid: this is handed
+/// to a seek, which takes any frame, and rounding it would move a marker off the beat it names.
+std::int64_t to_frames(double seconds, int sample_rate)
+{
+    if (!(seconds > 0.0)) {
+        return 0;
+    }
+    return static_cast<std::int64_t>(seconds * static_cast<double>(sample_rate));
+}
+
 std::string format_time_signature(std::span<const std::uint8_t> data)
 {
     if (data.size() < 2 || data[1] > 31) {
@@ -495,7 +626,7 @@ const char* encoding_name(TextEncoding encoding)
     return "WINDOWS-1252";
 }
 
-SongInfo read_song_info(std::span<const std::uint8_t> data, const std::string& name)
+SongInfo read_song_info(std::span<const std::uint8_t> data, const std::string& name, int sample_rate)
 {
     SongInfo info;
 
@@ -543,6 +674,16 @@ SongInfo read_song_info(std::span<const std::uint8_t> data, const std::string& n
     std::vector<std::string> karaoke_pieces;
     bool saw_lyric_meta = false;
 
+    // Markers and tempo changes are gathered in ticks and resolved once every track has been read:
+    // a file may put its tempo map on a conductor track that follows the tracks carrying markers,
+    // and converting as we went would place those against a map that was still being built.
+    struct TickedText {
+        std::int64_t tick = 0;
+        std::string text;
+    };
+    std::vector<TickedText> marker_ticks;
+    std::vector<TempoChange> tempo_changes;
+
     while (position + 8 <= smf.size()) {
         const bool is_track = smf[position] == 'M' && smf[position + 1] == 'T'
                               && smf[position + 2] == 'r' && smf[position + 3] == 'k';
@@ -569,8 +710,12 @@ SongInfo read_song_info(std::span<const std::uint8_t> data, const std::string& n
         position += available;
 
         std::uint8_t running = 0;
+        std::int64_t tick = 0;
         while (!cursor.spent() && !cursor.exhausted()) {
-            cursor.variable(); // Delta time, which nothing here needs: the sheet is not synced.
+            // Ticks are accumulated for the markers' sake alone. The lyric sheet is deliberately
+            // unsynced and nothing else here cares when it happened, but a marker that cannot be
+            // jumped to is a label rather than a place.
+            tick += cursor.variable();
             if (cursor.spent()) {
                 break;
             }
@@ -658,9 +803,15 @@ SongInfo read_song_info(std::span<const std::uint8_t> data, const std::string& n
                     break;
                 }
                 case meta_marker: {
-                    const std::string value = as_label();
-                    if (!value.empty() && !is_loop_marker(value)) {
-                        add_once(info.markers, value);
+                    // As written, not trimmed: a marker may turn out to be a karaoke syllable, and
+                    // the space in front of " all" is what keeps it from running into the word
+                    // before it. Trimmed again below for the ones that stay markers.
+                    const std::string value = as_written();
+                    if (!trimmed(value).empty() && !is_loop_marker(trimmed(value))) {
+                        // Kept in ticks for now: the tempo map is not complete until every track
+                        // has been read, and a file is free to put its tempo changes on a later
+                        // track than its markers.
+                        marker_ticks.push_back(TickedText{tick, value});
                     }
                     break;
                 }
@@ -670,8 +821,8 @@ SongInfo read_song_info(std::span<const std::uint8_t> data, const std::string& n
                             (static_cast<std::uint32_t>(payload[0]) << 16)
                             | (static_cast<std::uint32_t>(payload[1]) << 8) | payload[2];
                         ++info.tempo_changes;
-                        if (info.initial_tempo_bpm == 0.0 && microseconds > 0) {
-                            info.initial_tempo_bpm = 60'000'000.0 / microseconds;
+                        if (microseconds > 0) {
+                            tempo_changes.push_back(TempoChange{tick, microseconds});
                         }
                     }
                     break;
@@ -779,7 +930,62 @@ SongInfo read_song_info(std::span<const std::uint8_t> data, const std::string& n
     // FF 05 is the standard and wins where a file carries both, which a handful do -- usually a
     // Soft Karaoke file that somebody later ran through a sequencer that rewrote the lyrics
     // properly, leaving the older text in place.
-    info.lyrics = saw_lyric_meta ? join_karaoke(lyric_pieces) : join_karaoke(karaoke_pieces);
+    // Ordered by where they fall before anything is decided about them, because both the dialect
+    // test and the sheet they might become depend on reading them in the order they are sung.
+    std::stable_sort(marker_ticks.begin(), marker_ticks.end(),
+                     [](const TickedText& a, const TickedText& b) { return a.tick < b.tick; });
+
+    std::vector<std::string> marker_words;
+    marker_words.reserve(marker_ticks.size());
+    for (const TickedText& marker : marker_ticks) {
+        marker_words.push_back(marker.text);
+    }
+    const bool markers_sing = markers_are_lyrics(marker_words);
+
+    // FF 05 first, then Soft Karaoke's FF 01, then the marker dialect. A file carrying more than
+    // one is usually one that has been through a second sequencer, and the later conventions are
+    // the better-formed copy.
+    if (saw_lyric_meta) {
+        info.lyrics = join_karaoke(lyric_pieces);
+    } else if (!karaoke_pieces.empty()) {
+        info.lyrics = join_karaoke(karaoke_pieces);
+    } else if (markers_sing) {
+        info.lyrics = join_karaoke(marker_words);
+    }
+
+    // The opening tempo is the earliest by tick, not the first one read: a format-1 file's tempo map
+    // is on its own track, and a file whose tracks are stored out of order would otherwise be
+    // reported at whatever tempo happened to be parsed first.
+    const TempoMap tempos{tempo_changes, info.division};
+    if (!tempo_changes.empty()) {
+        const auto earliest = std::min_element(
+            tempo_changes.begin(), tempo_changes.end(),
+            [](const TempoChange& a, const TempoChange& b) { return a.tick < b.tick; });
+        info.initial_tempo_bpm = 60'000'000.0 / earliest->microseconds;
+    }
+
+    // Only an exact repeat is dropped: the same words at the same tick, which is what a file that
+    // writes its markers onto two tracks produces. The same words *later* is a second place in the
+    // song and has to stay. Keyed on the pair rather than compared against the previous entry --
+    // two tracks stamping different markers on one tick interleave, and an adjacent-only test
+    // would let the repeat through.
+    // Markers that turned out to be a lyric sheet are not also section markers: they have been
+    // joined into `lyrics` above, and listing them here as well would be the same words twice, once
+    // as prose and once as several hundred rows of one syllable each.
+    if (!markers_sing) {
+        std::vector<std::pair<std::int64_t, std::string>> seen;
+        seen.reserve(marker_ticks.size());
+        for (const TickedText& marker : marker_ticks) {
+            const auto key = std::pair{marker.tick, marker.text};
+            if (std::find(seen.begin(), seen.end(), key) != seen.end()) {
+                continue;
+            }
+            seen.push_back(key);
+            // Trimmed here, where it is a label again rather than a syllable.
+            info.markers.push_back(SongMarker{
+                trimmed(marker.text), to_frames(tempos.seconds_at(marker.tick), sample_rate)});
+        }
+    }
 
     info.encoding = detect_encoding(all_text);
     info.vintage = decide(declared, bank_lsbs, info.vintage_evidence);
