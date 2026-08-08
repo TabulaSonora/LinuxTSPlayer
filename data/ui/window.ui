@@ -17,6 +17,10 @@
     </section>
     <section>
       <item>
+        <attribute name="label" translatable="yes">Song _Information</attribute>
+        <attribute name="action">win.song-info</attribute>
+      </item>
+      <item>
         <attribute name="label" translatable="yes">_Export WAV…</attribute>
         <attribute name="action">win.export</attribute>
       </item>

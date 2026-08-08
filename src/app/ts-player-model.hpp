@@ -1,5 +1,6 @@
 #pragma once
 
+#include "host/ts_song_info.hpp"
 #include "host/ts_types.h"
 
 #include <adwaita.h>
@@ -30,6 +31,13 @@ gboolean ts_player_model_load_rom(TsPlayerModel* self, const char* path, gboolea
 
 gboolean ts_player_model_load_song(TsPlayerModel* self, const char* path, GError** error);
 void ts_player_model_unload_song(TsPlayerModel* self);
+
+/// What the loaded file says about itself: names, text, lyrics, loop and the module it asks for.
+///
+/// Not a property, and not on the display tick. It is fixed for the life of a song, so it is read
+/// once when something wants it -- `notify::song-name` is the signal that it has changed. A C++ type
+/// across this boundary is the same arrangement the engine structs already use here.
+const ts::host::SongInfo& ts_player_model_get_song_info(TsPlayerModel* self);
 
 // -- Transport -----------------------------------------------------------------------------------
 

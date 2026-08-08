@@ -6,6 +6,7 @@
 #include "app/ts-prefs-dialog.hpp"
 #include "app/ts-rom-setup.hpp"
 #include "app/ts-settings.hpp"
+#include "app/ts-song-info-window.hpp"
 #include "app/ts-transport.hpp"
 
 #include <initializer_list>
@@ -36,6 +37,13 @@ struct _TsWindow {
     GFile* pending;
 
     GCancellable* export_cancellable;
+
+    /// The song information window, while one is open.
+    ///
+    /// Kept so that asking for it twice raises the one that is already up rather than stacking a
+    /// second copy of the same file's details. Weak, not owning: the window is a top-level with its
+    /// own lifetime, and this has to become null when the user closes it.
+    GtkWindow* song_info;
 };
 
 G_DEFINE_FINAL_TYPE(TsWindow, ts_window, ADW_TYPE_APPLICATION_WINDOW)
@@ -80,9 +88,12 @@ static void ts_window_update_screen(TsWindow* self)
     adw_window_title_set_title(self->window_title, song != nullptr ? song : "Tabula Sonora");
 
     // Export lives in the menu rather than on a button, so this is what greys it out when there is
-    // nothing to export.
-    if (auto* action = G_SIMPLE_ACTION(g_action_map_lookup_action(G_ACTION_MAP(self), "export"))) {
-        g_simple_action_set_enabled(action, song != nullptr);
+    // nothing to export. Song information is greyed out beside it, for the same reason: both are
+    // questions about a file, and there is no file until one is loaded.
+    for (const char* name : {"export", "song-info"}) {
+        if (auto* action = G_SIMPLE_ACTION(g_action_map_lookup_action(G_ACTION_MAP(self), name))) {
+            g_simple_action_set_enabled(action, song != nullptr);
+        }
     }
 }
 
@@ -482,6 +493,24 @@ void ts_window_present_preferences(TsWindow* self)
     adw_dialog_present(ts_prefs_dialog_new(self->model), GTK_WIDGET(self));
 }
 
+// -- Song information ----------------------------------------------------------------------------
+
+static void on_song_info(GSimpleAction*, GVariant*, gpointer user_data)
+{
+    auto* self = TS_WINDOW(user_data);
+
+    // Raise the one already open rather than stacking another. The window follows the loaded file
+    // on its own, so a second copy would only ever say the same thing twice.
+    if (self->song_info == nullptr) {
+        self->song_info = ts_song_info_window_new(self->model, GTK_WINDOW(self));
+        // Clears itself when the user closes it, so the next invocation builds a fresh one.
+        g_object_add_weak_pointer(G_OBJECT(self->song_info),
+                                  reinterpret_cast<gpointer*>(&self->song_info));
+    }
+
+    gtk_window_present(self->song_info);
+}
+
 // -- Construction --------------------------------------------------------------------------------
 
 static void ts_window_dispose(GObject* object)
@@ -527,6 +556,7 @@ static void ts_window_init(TsWindow* self)
         {"open", on_open, nullptr, nullptr, nullptr, {0, 0, 0}},
         {"import-rom", on_import_rom, nullptr, nullptr, nullptr, {0, 0, 0}},
         {"export", on_export, nullptr, nullptr, nullptr, {0, 0, 0}},
+        {"song-info", on_song_info, nullptr, nullptr, nullptr, {0, 0, 0}},
         {"play-pause", on_play_pause, nullptr, nullptr, nullptr, {0, 0, 0}},
         {"rewind", on_rewind, nullptr, nullptr, nullptr, {0, 0, 0}},
         {"panic", on_panic, nullptr, nullptr, nullptr, {0, 0, 0}},

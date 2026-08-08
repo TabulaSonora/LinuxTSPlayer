@@ -151,6 +151,12 @@ std::string Player::song_name() const
     return session_.song_name();
 }
 
+SongInfo Player::song_info() const
+{
+    const std::lock_guard<std::mutex> guard{lock_};
+    return session_.song_info();
+}
+
 void Player::export_wav(const std::string& path, const std::function<bool(double)>& progress)
 {
     // Held for the whole export, and it is what keeps the borrowed note renderer alive; `lock_` is

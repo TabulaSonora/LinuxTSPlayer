@@ -57,6 +57,10 @@ struct _TsPlayerModel {
     /// progress it feeds is.
     std::atomic<double>* progress_slot;
 
+    /// What the loaded file says about itself, cached at load. Held by pointer for the same reason
+    /// the engine objects above are: GLib allocates this struct without running a constructor.
+    ts::host::SongInfo* song_info;
+
     /// One bit per part, so a change in *which* parts the song addresses can be spotted without
     /// comparing sixty-four structs.
     guint64 presence;
@@ -231,6 +235,10 @@ gboolean ts_player_model_load_song(TsPlayerModel* self, const char* path, GError
         return FALSE;
     }
 
+    // Before the name is published, because `notify::song-name` is what tells an open information
+    // window to redraw itself and it must not read the previous file's metadata when it does.
+    *self->song_info = self->player->song_info();
+
     set_string_field(self, self->song_name, self->player->song_name(), PROP_SONG_NAME);
     set_field(self, self->complete, FALSE, PROP_COMPLETE);
 
@@ -242,10 +250,16 @@ gboolean ts_player_model_load_song(TsPlayerModel* self, const char* path, GError
     return TRUE;
 }
 
+const ts::host::SongInfo& ts_player_model_get_song_info(TsPlayerModel* self)
+{
+    return *self->song_info;
+}
+
 void ts_player_model_unload_song(TsPlayerModel* self)
 {
     ts_player_model_pause(self);
     self->player->unload_song();
+    *self->song_info = {};
     set_string_field(self, self->song_name, {}, PROP_SONG_NAME);
     ts_player_model_refresh(self);
 }
@@ -470,6 +484,8 @@ static void ts_player_model_dispose(GObject* object)
     self->player = nullptr;
     delete self->progress_slot;
     self->progress_slot = nullptr;
+    delete self->song_info;
+    self->song_info = nullptr;
 
     g_clear_object(&self->parts);
 
@@ -529,6 +545,7 @@ static void ts_player_model_init(TsPlayerModel* self)
     self->device = new ts::host::AudioDevice(*self->player);
     self->midi = new ts::host::MidiInput(*self->player);
     self->progress_slot = new std::atomic<double>{0.0};
+    self->song_info = new ts::host::SongInfo{};
 
     self->latency_ms = self->player->latency_ms();
 

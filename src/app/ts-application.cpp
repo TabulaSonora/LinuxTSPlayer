@@ -161,6 +161,7 @@ static void ts_application_startup(GApplication* application)
         {"app.preferences", {"<Control>comma", nullptr, nullptr}},
         {"win.open", {"<Control>o", nullptr, nullptr}},
         {"win.export", {"<Control>e", nullptr, nullptr}},
+        {"win.song-info", {"<Control>i", nullptr, nullptr}},
         {"win.play-pause", {"space", nullptr, nullptr}},
         {"win.panic", {"<Control>period", nullptr, nullptr}},
         {"win.rewind", {"<Control>Home", nullptr, nullptr}},

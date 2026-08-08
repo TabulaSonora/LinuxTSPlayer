@@ -12,6 +12,7 @@
 #   TS_FILE   a MIDI file to open on launch
 #   TS_ROM    a SCCore.dll to pre-install into the throwaway profile, so the player screen is
 #             reachable instead of the first-run one
+#   TS_ACTION an action to activate before capturing, either kind: "app.about", "win.song-info"
 
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -66,13 +67,31 @@ APP_PID=$!
 
 sleep "$SETTLE"
 
-# Optionally open a dialog before capturing. GtkApplication exports its app-level actions on the
-# session bus, which is the only way to reach one without synthesising a click.
+# Optionally open a dialog before capturing. GtkApplication exports its actions on the session bus,
+# which is the only way to reach one without synthesising a click.
+#
+# Two interfaces, because there are two kinds of action and they are not exported the same way.
+# An `app.` action is reached through the freedesktop Application interface at the application's own
+# path; a `win.` action is not there at all -- GtkApplicationWindow exports its own group over
+# org.gtk.Actions at the window's path -- so a name is dispatched on its prefix.
 if [ -n "${TS_ACTION:-}" ]; then
-    gdbus call --session --dest "$APP_ID" \
-        --object-path "/${APP_ID//.//}" \
-        --method org.freedesktop.Application.ActivateAction \
-        "$TS_ACTION" '[]' '{}' >/dev/null 2>&1 || echo "Could not activate $TS_ACTION" >&2
+    case "$TS_ACTION" in
+    win.*)
+        # The first window, which is the only one this program opens.
+        gdbus call --session --dest "$APP_ID" \
+            --object-path "/${APP_ID//.//}/window/1" \
+            --method org.gtk.Actions.Activate \
+            "${TS_ACTION#win.}" '[]' '{}' >/dev/null 2>&1 ||
+            echo "Could not activate $TS_ACTION" >&2
+        ;;
+    *)
+        gdbus call --session --dest "$APP_ID" \
+            --object-path "/${APP_ID//.//}" \
+            --method org.freedesktop.Application.ActivateAction \
+            "${TS_ACTION#app.}" '[]' '{}' >/dev/null 2>&1 ||
+            echo "Could not activate $TS_ACTION" >&2
+        ;;
+    esac
     sleep 2
 fi
 

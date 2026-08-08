@@ -23,6 +23,13 @@ target_link_libraries(ts-host-smoke PRIVATE tsgui_host tsgui_warnings)
 
 # --- Metadata, which needs no ROM ---------------------------------------------------------------
 
+# What a file says about itself, over files this test assembles byte by byte. No ROM and no corpus:
+# the cases worth pinning are the malformed and the unusual, which is exactly what nobody can be
+# relied on to have a copy of.
+add_executable(ts-song-info-test ts_song_info_test.cpp)
+target_link_libraries(ts-song-info-test PRIVATE tsgui_host tsgui_warnings)
+add_test(NAME song-info COMMAND ts-song-info-test)
+
 find_program(DESKTOP_FILE_VALIDATE desktop-file-validate)
 if(DESKTOP_FILE_VALIDATE)
     add_test(NAME desktop-file

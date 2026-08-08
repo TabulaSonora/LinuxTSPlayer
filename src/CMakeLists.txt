@@ -18,6 +18,7 @@ target_link_libraries(tsgui_miniaudio PUBLIC Threads::Threads ${CMAKE_DL_LIBS} m
 
 add_library(tsgui_host STATIC
     host/ts_session.cpp
+    host/ts_song_info.cpp
     host/ts_player.cpp
     host/ts_audio_device.cpp
     host/ts_midi_input.cpp)
@@ -53,6 +54,7 @@ add_executable(${TSGUI_BINARY_NAME}
     app/ts-transport.cpp
     app/ts-rom-setup.cpp
     app/ts-prefs-dialog.cpp
+    app/ts-song-info-window.cpp
     app/ts-settings.cpp
     app/ts-mpris.cpp
     "${TSGUI_RESOURCES}")

@@ -114,6 +114,18 @@ void Session::load_song(const std::string& path)
     song_events_ = std::move(events);
     song_loop_ = parsed.loop;
 
+    // Taken from the same bytes, after the parse rather than before it: `smf::load` is what decides
+    // whether this file is playable at all, and a file it throws on should not leave a half-filled
+    // information window behind describing something that never loaded.
+    song_info_ = read_song_info(bytes, file_name(path));
+    song_info_.length = song_length_;
+    if (song_loop_) {
+        song_info_.has_loop = true;
+        song_info_.loop_start = song_loop_->start;
+        song_info_.loop_end = song_loop_->end;
+        song_info_.loop_soft = song_loop_->soft;
+    }
+
     if (engine_) {
         engine_->reset();
         arm_player();
@@ -127,6 +139,7 @@ void Session::unload_song()
     song_name_.clear();
     song_length_ = 0;
     song_loop_.reset();
+    song_info_ = {};
     used_channels_.fill(false);
     if (engine_) {
         engine_->reset();
