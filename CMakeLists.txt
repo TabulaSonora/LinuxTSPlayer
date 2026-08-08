@@ -41,6 +41,80 @@ endif()
 set(TSGUI_NATIVETS_DIR "${_tsgui_default_nativets}" CACHE PATH
     "Path to a NativeTS source tree, when not using an installed one")
 
+# ---------------------------------------------------------------------------------------------
+# Which engine this binary carries
+#
+# The About dialog names the NativeTS commit, because it is the first thing worth knowing about a
+# report that the voice sounds wrong: this host tracks the engine by submodule pointer, and the
+# voice moves underneath it between two builds of the same TSGUI_VERSION. "0.1.0" identifies the
+# player and says nothing about the synthesizer, which is the part being listened to.
+#
+# Read from the tree actually being compiled rather than from `git submodule status` here, so a
+# sibling ../NativeTS checkout or a -DTSGUI_NATIVETS_DIR=... reports itself instead of a submodule
+# pointer that is not what got built. An installed engine has no tree to ask, and leaves this empty.
+#
+# Empty is a supported outcome, not a failure: a source tarball has no repository, and the dialog
+# falls back to linking the project rather than a commit in it. Which is also why this is not
+# FATAL_ERROR -- a missing hash must never be the reason someone cannot build the player.
+# ---------------------------------------------------------------------------------------------
+set(TSGUI_NATIVETS_COMMIT "")
+
+if(NOT TSGUI_USE_INSTALLED_NATIVETS)
+    find_package(Git QUIET)
+    if(GIT_FOUND)
+        execute_process(
+            COMMAND "${GIT_EXECUTABLE}" -C "${TSGUI_NATIVETS_DIR}" rev-parse HEAD
+            OUTPUT_VARIABLE _tsgui_nativets_commit
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            ERROR_QUIET
+            RESULT_VARIABLE _tsgui_nativets_rev_parse)
+
+        if(_tsgui_nativets_rev_parse EQUAL 0)
+            set(TSGUI_NATIVETS_COMMIT "${_tsgui_nativets_commit}")
+
+            # Configure again when the engine moves, or the hash goes stale the moment the submodule
+            # is bumped: the engine's *sources* change, so ninja rebuilds them and the binary really
+            # does carry the new voice, but a compile definition fixed at configure time would still
+            # name the old commit -- a dialog confidently reporting the wrong answer, which is worse
+            # than reporting none.
+            #
+            # Both files, because they go stale by different routes. A `git checkout` of another
+            # commit rewrites HEAD, which is what `git submodule update` leaves behind; a
+            # fast-forward of the branch that HEAD already points at never touches HEAD at all and
+            # moves only the ref underneath it.
+            execute_process(
+                COMMAND "${GIT_EXECUTABLE}" -C "${TSGUI_NATIVETS_DIR}" rev-parse --absolute-git-dir
+                OUTPUT_VARIABLE _tsgui_nativets_git_dir
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+                ERROR_QUIET)
+
+            if(EXISTS "${_tsgui_nativets_git_dir}/HEAD")
+                set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+                    "${_tsgui_nativets_git_dir}/HEAD")
+
+                file(READ "${_tsgui_nativets_git_dir}/HEAD" _tsgui_nativets_head)
+                string(STRIP "${_tsgui_nativets_head}" _tsgui_nativets_head)
+                # Anything else is a detached HEAD, which holds the hash itself and needs no ref.
+                if(_tsgui_nativets_head MATCHES "^ref: (.+)$")
+                    set(_tsgui_nativets_ref "${_tsgui_nativets_git_dir}/${CMAKE_MATCH_1}")
+                    # A packed ref has no file of its own; the HEAD dependency is all there is, and
+                    # a loose ref appears the moment the branch next moves anyway.
+                    if(EXISTS "${_tsgui_nativets_ref}")
+                        set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+                            "${_tsgui_nativets_ref}")
+                    endif()
+                endif()
+            endif()
+        endif()
+    endif()
+
+    if(TSGUI_NATIVETS_COMMIT)
+        message(STATUS "NativeTS at ${TSGUI_NATIVETS_COMMIT}")
+    else()
+        message(STATUS "NativeTS commit unknown; About will link the project rather than a commit")
+    endif()
+endif()
+
 if(TSGUI_USE_INSTALLED_NATIVETS)
     find_package(TabulaSonora REQUIRED)
 else()

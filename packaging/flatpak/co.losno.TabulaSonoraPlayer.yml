@@ -98,9 +98,21 @@ modules:
       # and builds the same thing locally and in CI.
       #
       # `skip` keeps the build tree out of the copy, which would otherwise be gigabytes.
+      #
+      # `.git` is deliberately *not* skipped, though it used to be. The About dialog names the
+      # NativeTS commit, and the only record of which commit a submodule is checked out at lives in
+      # the repository -- there is no file in the working tree that carries it. Skipping `.git` left
+      # the build sandbox unable to answer, so the flatpak, which is the primary distribution, was
+      # the one build where the hash was always missing.
+      #
+      # The alternative was passing -DTSGUI_NATIVETS_COMMIT=... through config-opts above. It was
+      # rejected because this manifest is static: the hash would have to be rewritten here on every
+      # engine bump, and the first time someone forgot, the dialog would report the wrong commit
+      # rather than none. It costs about 7 MB in the copy, and a cache miss on this module whenever
+      # the repository's own files move, which for a module whose sources have just changed is
+      # usually a rebuild that was going to happen anyway.
       - type: dir
         path: ../..
         skip:
           - build
-          - .git
           - .cache

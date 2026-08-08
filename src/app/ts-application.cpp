@@ -87,6 +87,31 @@ static void on_about(GSimpleAction* action, GVariant* parameter, gpointer user_d
         "as code. Reverb and chorus coefficients are Roland-derived; see the NOTICE file "
         "distributed with this program.");
 
+    // The engine's commit, on the Details page beside the version.
+    //
+    // The version above names the player; this names the voice, and they move independently. A
+    // report that a kit sounds wrong is about a NativeTS commit, not about "0.1.0", and the person
+    // making it should not have to be told how to find out which one they are running.
+    //
+    // The link goes to the commit rather than to the repository root because that is what makes the
+    // hash worth showing: it lands on the change itself. Seven characters in the title, as git
+    // abbreviates them, with the whole hash carried in the URL for anyone who needs it exact.
+    if (TSGUI_NATIVETS_COMMIT[0] != '\0') {
+        char* title = g_strdup_printf("Sound Canvas Voice Engine (%.7s)", TSGUI_NATIVETS_COMMIT);
+        char* url = g_strdup_printf("https://github.com/TabulaSonora/NativeTS/commit/%s",
+                                    TSGUI_NATIVETS_COMMIT);
+
+        adw_about_dialog_add_link(ADW_ABOUT_DIALOG(about), title, url);
+
+        g_free(title);
+        g_free(url);
+    } else {
+        // Built from a tarball, or from an installed engine: there is no commit to name, and a row
+        // reading "unknown" would be worse than one that simply goes to the project.
+        adw_about_dialog_add_link(ADW_ABOUT_DIALOG(about), "Sound Canvas Voice Engine",
+                                  "https://github.com/TabulaSonora/NativeTS");
+    }
+
     adw_dialog_present(about, GTK_WIDGET(gtk_application_get_active_window(application)));
 }
 

@@ -63,7 +63,10 @@ set_source_files_properties("${TSGUI_RESOURCES}" PROPERTIES COMPILE_OPTIONS "-w"
 
 target_compile_definitions(${TSGUI_BINARY_NAME} PRIVATE
     TSGUI_APP_ID="${TSGUI_APP_ID}"
-    TSGUI_VERSION="${PROJECT_VERSION}")
+    TSGUI_VERSION="${PROJECT_VERSION}"
+    # Always defined, empty when the engine's commit could not be read, so the dialog tests a string
+    # rather than the build testing a macro. See the block that sets it in the top-level CMakeLists.
+    TSGUI_NATIVETS_COMMIT="${TSGUI_NATIVETS_COMMIT}")
 
 target_link_libraries(${TSGUI_BINARY_NAME}
     PRIVATE
