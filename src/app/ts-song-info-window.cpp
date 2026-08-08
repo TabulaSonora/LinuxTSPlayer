@@ -433,7 +433,7 @@ void rebuild(TsSongInfoWindow* self)
     auto* song = new_scrolling_page();
     build_song_page(song, info, self->model);
     adw_view_stack_add_titled_with_icon(self->pages, GTK_WIDGET(song), "song", "Song",
-                                        "dialog-information-symbolic");
+                                        "help-about-symbolic");
 
     auto* tracks = new_scrolling_page();
     build_tracks_page(tracks, info);
