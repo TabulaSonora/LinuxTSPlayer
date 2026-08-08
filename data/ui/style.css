@@ -1,0 +1,40 @@
+/*
+ * The application's own style, loaded over the platform stylesheet at APPLICATION priority so a
+ * user stylesheet still wins over it.
+ *
+ * Everything here is about one thing: a mixer strip has to be short enough that all sixteen parts
+ * of a General MIDI score are on screen together. The mixer answers "which part is that" while the
+ * music plays, and a strip you have to scroll to find has already lost the moment -- muting the
+ * wrong one and scrolling back costs more than the answer was worth.
+ *
+ * With stock metrics a strip measures about 54px: a 34px button inside a sidebar row that is itself
+ * held open by its own minimum and padding. Sixteen of those want ~870px of list, which on a 1080p
+ * screen is more than the whole window gets once the shell's panels, the header bar and the
+ * transport are taken out. The rules below bring a strip to about 32px, so sixteen fit in ~520px
+ * and the wide layout stays usable on the shortest screen anyone is likely to run this on.
+ */
+
+/*
+ * The sidebar row is a floor, not a suggestion: libadwaita gives it a minimum height and vertical
+ * padding of its own, and neither reacts to the strip inside getting shorter. Zeroing both hands
+ * the vertical spacing to the strip's own margins, which is the one place it can be reasoned about.
+ * The horizontal padding is left alone -- it is what keeps the selection and hover rounding clear
+ * of the scrollbar.
+ */
+mixer listview.navigation-sidebar > row {
+    min-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+/*
+ * Mute and solo are one letter each, so a stock button spends most of its 34px on padding around a
+ * glyph half that tall. They stay comfortably clickable at this size -- 24px square is still above
+ * the 22px libadwaita itself uses for the compact controls in a header bar -- and they are what
+ * decides the height of the whole strip, since nothing else in it is taller than a line of text.
+ */
+partrow button {
+    min-height: 22px;
+    min-width: 24px;
+    padding: 0 6px;
+}

@@ -116,6 +116,10 @@ anywhere, because several headers carry C++ types (spans, references to engine s
 - **UI is `data/ui/window.ui`**, compiled into a GResource. The layout switches on **height**, not
   width, via `AdwMultiLayoutView`: below 460sp the transport and mixer move into a view switcher.
   One transport and one mixer are built once and moved between layouts.
+- **`data/ui/style.css`** is the only stylesheet, loaded from the GResource in
+  `ts_application_startup`. It exists for one reason — a mixer strip has to be short enough that all
+  sixteen parts fit on screen together — so it is metrics, not colour, and the row's own margins in
+  `ts-part-row.cpp` are the other half of the same decision.
 - `TsMpris` publishes MPRIS2 on state change only, never on the display tick.
 - Actions/accels are registered in `ts-application.cpp`; `win.*` actions live on `TsWindow`.
 

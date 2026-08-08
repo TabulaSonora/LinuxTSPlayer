@@ -132,6 +132,16 @@ static void ts_application_startup(GApplication* application)
         gtk_icon_theme_get_for_display(gdk_display_get_default()),
         "/co/losno/TabulaSonoraPlayer/icons");
 
+    // Our own metrics over the platform stylesheet. APPLICATION priority rather than USER: this is
+    // the program stating how its own widgets are proportioned, and a user stylesheet is still
+    // entitled to disagree with it.
+    GtkCssProvider* css = gtk_css_provider_new();
+    gtk_css_provider_load_from_resource(css, "/co/losno/TabulaSonoraPlayer/ui/style.css");
+    gtk_style_context_add_provider_for_display(gdk_display_get_default(),
+                                               GTK_STYLE_PROVIDER(css),
+                                               GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+    g_object_unref(css);
+
     static const GActionEntry entries[] = {
         {"quit", on_quit, nullptr, nullptr, nullptr, {0, 0, 0}},
         {"about", on_about, nullptr, nullptr, nullptr, {0, 0, 0}},

@@ -88,7 +88,15 @@
     </key>
 
     <key name="window-width" type="i"><default>700</default></key>
-    <key name="window-height" type="i"><default>720</default></key>
+
+    <!--
+      Tall enough for the transport and all sixteen parts of a General MIDI score at once, which is
+      what the mixer is for: a strip measures about 32px, so sixteen of them plus the transport and
+      the header bar come to a little over 800. Safe on a short screen even so -- GTK clamps a
+      window's default size to the monitor's work area, so a 768px laptop gets a window that fits it
+      rather than one hanging off the bottom.
+    -->
+    <key name="window-height" type="i"><default>830</default></key>
     <key name="window-maximized" type="b"><default>false</default></key>
 
   </schema>

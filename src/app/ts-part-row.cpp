@@ -2,6 +2,18 @@
 
 #include "app/ts-voice-meter.hpp"
 
+namespace {
+
+/// The strip width below which the chips are dropped rather than squeezed; see
+/// `ts_part_row_size_allocate` for why the decision is made there and not by the box.
+///
+/// Chosen from what is left over: the address, the meter and the two toggles take about 190px of a
+/// strip, so at this width the name and the chips have some 230px between them -- enough for the
+/// longest tone name in the map beside "Drums · SC-8820" without either being cut.
+constexpr int tags_minimum_width = 420;
+
+} // namespace
+
 struct _TsPartRow {
     GtkWidget parent_instance;
 
@@ -18,6 +30,10 @@ struct _TsPartRow {
     GtkWidget* meter;
     GtkWidget* mute;
     GtkWidget* solo;
+
+    /// Whether the bound part has any chips at all. Kept apart from whether they are *shown*, which
+    /// is a question of how wide the strip has been allocated and is answered during allocation.
+    gboolean has_tags;
 
     /// Set while the row is writing its own toggles from the bound part, so the handlers below can
     /// tell a rebind from a click and not send the engine a change it just reported.
@@ -52,7 +68,9 @@ static void ts_part_row_sync(TsPartRow* self)
     gtk_label_set_text(GTK_LABEL(self->label), label != nullptr ? label : "");
     gtk_label_set_text(GTK_LABEL(self->name), name != nullptr ? name : "");
     gtk_label_set_text(GTK_LABEL(self->tags), tags != nullptr ? tags : "");
-    gtk_widget_set_visible(self->tags, tags != nullptr && *tags != '\0');
+    self->has_tags = tags != nullptr && *tags != '\0';
+    gtk_widget_set_visible(self->tags, self->has_tags && gtk_widget_get_width(GTK_WIDGET(self)) >=
+                                                             tags_minimum_width);
 
     // Tooltips are answered on demand rather than written here; see the query handler below.
 
@@ -159,9 +177,32 @@ static void ts_part_row_dispose(GObject* object)
     G_OBJECT_CLASS(ts_part_row_parent_class)->dispose(object);
 }
 
+/// Drops the chips on a strip too narrow to carry them beside the name.
+///
+/// The box cannot be asked to do this, with either child expanding or neither: given less than both
+/// labels want it fills the smaller natural size first and takes the whole shortfall out of the
+/// larger, which at 380px left "Syn.Str…" beside an untouched "SC-8820" -- the wrong one of the two
+/// kept whole, since the chip only qualifies a name the reader can no longer read. Hiding the chip
+/// outright gives the name every pixel there is, and the bank numbers the chip is derived from are
+/// in the tooltip regardless.
+///
+/// Deciding on the strip's own width is what keeps this from oscillating: the width comes from the
+/// list view, not from what the strip contains, so hiding the chips never creates the room that
+/// would bring them back.
+static void ts_part_row_size_allocate(GtkWidget* widget, int width, int height, int baseline)
+{
+    auto* self = TS_PART_ROW(widget);
+
+    gtk_widget_set_visible(self->tags, self->has_tags && width >= tags_minimum_width);
+
+    GTK_WIDGET_CLASS(ts_part_row_parent_class)->size_allocate(widget, width, height, baseline);
+}
+
 static void ts_part_row_class_init(TsPartRowClass* klass)
 {
     G_OBJECT_CLASS(klass)->dispose = ts_part_row_dispose;
+
+    GTK_WIDGET_CLASS(klass)->size_allocate = ts_part_row_size_allocate;
 
     gtk_widget_class_set_layout_manager_type(GTK_WIDGET_CLASS(klass), GTK_TYPE_BIN_LAYOUT);
     gtk_widget_class_set_css_name(GTK_WIDGET_CLASS(klass), "partrow");
@@ -172,8 +213,12 @@ static void ts_part_row_init(TsPartRow* self)
     GtkWidget* box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 12);
     gtk_widget_set_margin_start(box, 18);
     gtk_widget_set_margin_end(box, 18);
-    gtk_widget_set_margin_top(box, 8);
-    gtk_widget_set_margin_bottom(box, 8);
+
+    // Four pixels, and the sidebar row's own vertical padding zeroed in the stylesheet, because all
+    // sixteen parts of a score have to be visible at once -- see the note there. This is the only
+    // vertical spacing a strip has left, so it is deliberately small rather than merely reduced.
+    gtk_widget_set_margin_top(box, 4);
+    gtk_widget_set_margin_bottom(box, 4);
 
     // A1..D16, at a fixed width so the instrument names below each other line up rather than
     // stepping in and out as the channel number reaches two digits.
@@ -188,7 +233,12 @@ static void ts_part_row_init(TsPartRow* self)
     g_signal_connect(self->label, "query-tooltip", G_CALLBACK(on_query_tooltip), self);
     gtk_box_append(GTK_BOX(box), self->label);
 
-    self->names = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+    // Name and chips beside each other, not stacked. Stacked they cost two lines of text where the
+    // rest of the strip needs one, and two lines is most of the difference between sixteen strips
+    // fitting on a 1080p screen and twelve of them fitting; read across, the chips still sit next to
+    // the name they qualify. Baseline-aligned rather than centred, so the caption sits on the same
+    // line as the name instead of floating against a taller glyph.
+    self->names = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
     GtkWidget* names = self->names;
     gtk_widget_set_valign(names, GTK_ALIGN_CENTER);
     gtk_widget_set_hexpand(names, TRUE);
@@ -199,13 +249,22 @@ static void ts_part_row_init(TsPartRow* self)
     gtk_label_set_xalign(GTK_LABEL(self->name), 0.0F);
     gtk_label_set_ellipsize(GTK_LABEL(self->name), PANGO_ELLIPSIZE_END);
     gtk_label_set_single_line_mode(GTK_LABEL(self->name), TRUE);
+    gtk_widget_set_valign(self->name, GTK_ALIGN_BASELINE_CENTER);
     gtk_box_append(GTK_BOX(names), self->name);
 
+    // The chips expand and align right, which puts them against the meter rather than trailing the
+    // name: down a column of sixteen strips that gives them an edge to line up on, where following
+    // the name would leave them scattered across the width. What happens when there is not room for
+    // both is decided in the allocation override above, not here -- a box would take the shortfall
+    // out of the name instead.
     self->tags = gtk_label_new("");
     gtk_widget_add_css_class(self->tags, "caption");
     gtk_widget_add_css_class(self->tags, "dim-label");
-    gtk_label_set_xalign(GTK_LABEL(self->tags), 0.0F);
+    gtk_label_set_xalign(GTK_LABEL(self->tags), 1.0F);
+    gtk_widget_set_hexpand(self->tags, TRUE);
     gtk_label_set_ellipsize(GTK_LABEL(self->tags), PANGO_ELLIPSIZE_END);
+    gtk_label_set_single_line_mode(GTK_LABEL(self->tags), TRUE);
+    gtk_widget_set_valign(self->tags, GTK_ALIGN_BASELINE_CENTER);
     gtk_box_append(GTK_BOX(names), self->tags);
 
     gtk_box_append(GTK_BOX(box), names);
