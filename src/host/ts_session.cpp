@@ -465,6 +465,26 @@ ToneGeneratorOptions Session::options() const
     options.extended_interpolation = settings_.extendedInterpolation;
     options.output_gain = settings_.outputGain;
     options.channels = &channels_;
+
+    // The module's own timing, and deliberately not settings.
+    //
+    // Neither of these is an option on the module: `TG_ShortMidiIn` only rings a message and
+    // `TG_Process` walks it out four 32-sample chunks later, always, and `tg_output_filter` runs on
+    // every chunk it emits. The engine defaults them the other way because its own unit tests send
+    // a message and inspect a part on the next line, which is a convenience for testing *laws* and
+    // the wrong setting for rendering a *song*.
+    //
+    // Left unset, this program started every note 128 samples early and skipped a stage the
+    // hardware always runs -- a fidelity bug in a program whose whole purpose is the hardware's
+    // voice. It also stopped being comparable: `tabula-sonora render` sets both unconditionally as
+    // of engine fa3c9a6a, with no flag to ask for the old behaviour, so `export-matches-cli` is a
+    // byte comparison against a differently-timed engine unless this matches it.
+    //
+    // The cost is four milliseconds of latency on live MIDI, which the module also has, against a
+    // uniform shift that is inaudible in playback.
+    options.event_delay_blocks = 4;
+    options.bypass_output_filter = false;
+
     return options;
 }
 
