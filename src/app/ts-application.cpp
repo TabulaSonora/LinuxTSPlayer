@@ -77,6 +77,13 @@ static void on_about(GSimpleAction* action, GVariant* parameter, gpointer user_d
         ADW_ABOUT_DIALOG(about),
         "Plays MIDI files through a native reimplementation of the Roland Sound Canvas VA voice.");
 
+    // The organisation rather than this repository, because the thing a reader is looking for is
+    // rarely only this one: the player, the engine it renders through and the SwiftUI port it was
+    // ported from are three repositories under here, and which of them a question belongs to is
+    // usually clearer from the outside than from in this dialog. The engine's own link below is the
+    // exception, and it is exact because it names a commit.
+    adw_about_dialog_set_website(ADW_ABOUT_DIALOG(about), "https://github.com/TabulaSonora");
+
     // Not decoration: reverb and chorus coefficients compiled into the engine are Roland-derived,
     // and the upstream notice has to travel with any binary that carries them.
     // GTK_LICENSE_CUSTOM, not GTK_LICENSE_UNKNOWN: the custom text is only rendered for the custom
