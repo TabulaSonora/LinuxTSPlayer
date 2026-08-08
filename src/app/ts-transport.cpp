@@ -1,5 +1,7 @@
 #include "app/ts-transport.hpp"
 
+#include "app/ts-settings.hpp"
+
 #include <cmath>
 #include <initializer_list>
 
@@ -19,6 +21,12 @@ struct _TsTransport {
     GtkWidget* play;
     GtkWidget* play_icon;
     GtkWidget* loop;
+
+    /// Output gain. Bound to its GSettings key rather than to the model, so it is not synced from
+    /// `ts_transport_sync` like everything else here.
+    GtkWidget* gain;
+    GtkAdjustment* gain_adjustment;
+    GtkWidget* gain_readout;
 
     GtkWidget* voices;
     GtkWidget* xg;
@@ -180,6 +188,18 @@ static void on_scale_changed(GtkAdjustment* adjustment, gpointer user_data)
     gtk_label_set_text(GTK_LABEL(self->elapsed), elapsed);
 }
 
+/// The gain readout, which follows the slider rather than the engine.
+///
+/// Shown as a percentage although the setting is a linear multiplier, because "120%" says what
+/// moving the handle did and "1.20" only says what it is called. The engine's own unity is 100%.
+static void on_gain_changed(GtkAdjustment* adjustment, gpointer user_data)
+{
+    auto* self = TS_TRANSPORT(user_data);
+    const double gain = gtk_adjustment_get_value(adjustment);
+    g_autofree char* text = g_strdup_printf("%d%%", static_cast<int>(gain * 100.0 + 0.5));
+    gtk_label_set_text(GTK_LABEL(self->gain_readout), text);
+}
+
 static void on_loop_toggled(GtkToggleButton* button, gpointer user_data)
 {
     auto* self = TS_TRANSPORT(user_data);
@@ -319,6 +339,67 @@ static void ts_transport_init(TsTransport* self)
     gtk_widget_set_hexpand(spacer, TRUE);
     gtk_box_append(GTK_BOX(controls), spacer);
 
+    // -- Gain --
+    //
+    // Beside the transport buttons rather than in Preferences, where it started: it is the one
+    // engine value that is played rather than configured. Everything else in that dialog changes
+    // what the synth *is* and costs a generator rebuild; gain changes how loud the mix comes out,
+    // is applied live by `Session::set_settings`, and is the thing a listener reaches for while a
+    // file is playing. Reaching for it through a menu and a dialog for that is a mismatch.
+    GtkWidget* gain_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
+    gtk_widget_set_tooltip_text(gain_box,
+                                "Gain on the finished mix. 100% is the engine's own level; above "
+                                "it a loud file can clip.");
+
+    GtkWidget* gain_icon = gtk_image_new_from_icon_name("audio-volume-high-symbolic");
+    gtk_widget_add_css_class(gain_icon, "dim-label");
+    gtk_box_append(GTK_BOX(gain_box), gain_icon);
+
+    self->gain_adjustment = gtk_adjustment_new(1.0, 0.0, 2.0, 0.05, 0.25, 0);
+    self->gain = gtk_scale_new(GTK_ORIENTATION_HORIZONTAL, self->gain_adjustment);
+    gtk_scale_set_draw_value(GTK_SCALE(self->gain), FALSE);
+    // 72px is a floor, not the width: the slider takes half of whatever the row has spare.
+    //
+    // A single number cannot serve both ends of this layout. The row is four buttons wide already,
+    // and 360px -- the minimum the window advertises, and the width the narrow layout exists to
+    // serve -- leaves barely 80px beside them, so anything wider as a *minimum* pushes the
+    // transport past what the window says it can be and the adaptive layout stops working. At the
+    // 700px default there is room to spare and no reason to leave a stub.
+    //
+    // So the slider expands, and so does the spacer in front of it, which makes GtkBox split the
+    // slack between them evenly. The slider grows with the window and the gap ahead of it grows at
+    // the same rate, so the group stays pinned to the right instead of drifting into the middle of
+    // the row. Below that the floor takes over: at 360px there is no slack, the spacer collapses,
+    // and the slider is the 72px the row can afford.
+    //
+    // An AdwClamp was the obvious way to also cap the growth, and does not work here: it measures
+    // its child's natural size, not its maximum, so a box with slack to give hands it the floor and
+    // the slider never grows at all. Capping it properly would take a widget that reports a natural
+    // size larger than its minimum, which is not worth a subclass for a slider.
+    gtk_widget_set_size_request(self->gain, 72, -1);
+    gtk_widget_set_hexpand(self->gain, TRUE);
+    gtk_widget_set_valign(self->gain, GTK_ALIGN_CENTER);
+
+    // A tick at unity, unlabelled. The scale spans a range whose interesting point is not an end,
+    // and without the tick there is no way to put the handle back on the engine's own level by eye.
+    gtk_scale_add_mark(GTK_SCALE(self->gain), 1.0, GTK_POS_BOTTOM, nullptr);
+
+    // Two decimals, which is what the key stores and what the removed spin row offered. It also
+    // bounds the writes a drag makes: without it every motion event within one pixel would be a
+    // fresh value, and the binding below turns each value into a settings write.
+    gtk_range_set_round_digits(GTK_RANGE(self->gain), 2);
+    gtk_box_append(GTK_BOX(gain_box), self->gain);
+
+    self->gain_readout = gtk_label_new("100%");
+    gtk_widget_add_css_class(self->gain_readout, "caption");
+    gtk_widget_add_css_class(self->gain_readout, "numeric");
+    gtk_widget_add_css_class(self->gain_readout, "dim-label");
+    gtk_label_set_xalign(GTK_LABEL(self->gain_readout), 1.0F);
+    gtk_label_set_width_chars(GTK_LABEL(self->gain_readout), 4);
+    gtk_box_append(GTK_BOX(gain_box), self->gain_readout);
+
+    gtk_box_append(GTK_BOX(controls), gain_box);
+
     gtk_box_append(GTK_BOX(box), controls);
 
     // -- Export progress, only while there is an export --
@@ -397,6 +478,16 @@ GtkWidget* ts_transport_new(TsPlayerModel* model)
     gtk_widget_add_controller(self->scale, GTK_EVENT_CONTROLLER(drag));
 
     g_signal_connect(self->adjustment, "value-changed", G_CALLBACK(on_scale_changed), self);
+
+    // Straight to the key, not through the model, and in both directions.
+    //
+    // GSettings is the source of truth here as everywhere else, so the slider writes the key and
+    // `ts_settings_bind_model` applies it -- one path from the value to the engine, whether it was
+    // moved here, set over MPRIS, or restored at startup. Binding it also means the handle follows
+    // an MPRIS volume change for free, which a one-way control would not.
+    g_signal_connect(self->gain_adjustment, "value-changed", G_CALLBACK(on_gain_changed), self);
+    g_settings_bind(ts_settings_get(), "output-gain", self->gain_adjustment, "value",
+                    G_SETTINGS_BIND_DEFAULT);
 
     g_signal_connect_object(model, "notify", G_CALLBACK(on_model_notify), self, G_CONNECT_DEFAULT);
     ts_transport_sync(self);

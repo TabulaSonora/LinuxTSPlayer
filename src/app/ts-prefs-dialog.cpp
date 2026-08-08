@@ -200,18 +200,9 @@ AdwDialog* ts_prefs_dialog_new(TsPlayerModel* model)
     add_switch(effects, self->settings, "efx", "Insertion Effects", nullptr);
     adw_preferences_page_add(page, effects);
 
-    // -- Output --
-    auto* output = ADW_PREFERENCES_GROUP(adw_preferences_group_new());
-    adw_preferences_group_set_title(output, "Output");
-
-    auto* gain_row = ADW_SPIN_ROW(adw_spin_row_new_with_range(0.0, 2.0, 0.05));
-    adw_preferences_row_set_title(ADW_PREFERENCES_ROW(gain_row), "Gain");
-    adw_action_row_set_subtitle(ADW_ACTION_ROW(gain_row), "Linear gain on the finished mix");
-    adw_spin_row_set_digits(gain_row, 2);
-    g_settings_bind(self->settings, "output-gain", gain_row, "value", G_SETTINGS_BIND_DEFAULT);
-    adw_preferences_group_add(output, GTK_WIDGET(gain_row));
-
-    adw_preferences_page_add(page, output);
+    // No Output group. Gain used to be one, and now lives in the transport beside the buttons: it
+    // is the one engine value that is adjusted while listening rather than decided beforehand, and
+    // the only one that costs no rebuild, so nothing about it fits a dialog reached through a menu.
 
     // -- Latency --
     auto* latency = ADW_PREFERENCES_GROUP(adw_preferences_group_new());
