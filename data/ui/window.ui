@@ -23,7 +23,8 @@
     </section>
     <section>
       <item>
-        <attribute name="label" translatable="yes">Import Sound Canvas _ROM…</attribute>
+        <attribute name="label" translatable="yes"
+                   comments="The ROM is the SCCore.dll the engine reads its tables from.">Import Sound Canvas _ROM…</attribute>
         <attribute name="action">win.import-rom</attribute>
       </item>
       <item>
@@ -89,7 +90,8 @@
                       <object class="GtkMenuButton">
                         <property name="icon-name">open-menu-symbolic</property>
                         <property name="primary">True</property>
-                        <property name="tooltip-text" translatable="yes">Main Menu</property>
+                        <property name="tooltip-text" translatable="yes"
+                                  comments="Tooltip on the hamburger button.">Main Menu</property>
                         <property name="menu-model">primary_menu</property>
                       </object>
                     </child>
@@ -119,7 +121,8 @@
                     <child type="start">
                       <object class="GtkButton">
                         <property name="icon-name">document-open-symbolic</property>
-                        <property name="tooltip-text" translatable="yes">Open a MIDI file</property>
+                        <property name="tooltip-text" translatable="yes"
+                                  comments="Tooltip on the button that opens the file chooser.">Open a MIDI file</property>
                         <property name="action-name">win.open</property>
                       </object>
                     </child>
@@ -127,7 +130,8 @@
                       <object class="GtkMenuButton">
                         <property name="icon-name">open-menu-symbolic</property>
                         <property name="primary">True</property>
-                        <property name="tooltip-text" translatable="yes">Main Menu</property>
+                        <property name="tooltip-text" translatable="yes"
+                                  comments="Tooltip on the hamburger button.">Main Menu</property>
                         <property name="menu-model">primary_menu</property>
                       </object>
                     </child>
@@ -145,7 +149,8 @@
                           about the file being played.
                         -->
                         <property name="icon-name">help-about-symbolic</property>
-                        <property name="tooltip-text" translatable="yes">Song information</property>
+                        <property name="tooltip-text" translatable="yes"
+                                  comments="Opens the window describing the loaded file.">Song information</property>
                         <property name="action-name">win.song-info</property>
                       </object>
                     </child>
@@ -197,7 +202,8 @@
                             <child>
                               <object class="AdwViewStackPage">
                                 <property name="name">transport</property>
-                                <property name="title" translatable="yes">Playing</property>
+                                <property name="title" translatable="yes"
+                                          comments="View switcher page holding the transport, on short windows.">Playing</property>
                                 <property name="icon-name">media-playback-start-symbolic</property>
                                 <property name="child">
                                   <object class="AdwLayoutSlot">
@@ -209,7 +215,8 @@
                             <child>
                               <object class="AdwViewStackPage">
                                 <property name="name">mixer</property>
-                                <property name="title" translatable="yes">Mixer</property>
+                                <property name="title" translatable="yes"
+                                          comments="View switcher page holding the mixer strips.">Mixer</property>
                                 <property name="icon-name">view-list-symbolic</property>
                                 <property name="child">
                                   <object class="AdwLayoutSlot">

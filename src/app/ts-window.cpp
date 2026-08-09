@@ -9,6 +9,8 @@
 #include "app/ts-song-info-window.hpp"
 #include "app/ts-transport.hpp"
 
+#include <glib/gi18n.h>
+
 #include <initializer_list>
 #include <string>
 
@@ -53,7 +55,7 @@ G_DEFINE_FINAL_TYPE(TsWindow, ts_window, ADW_TYPE_APPLICATION_WINDOW)
 static void ts_window_report(TsWindow* self, const char* heading, const char* detail)
 {
     AdwDialog* dialog = adw_alert_dialog_new(heading, detail);
-    adw_alert_dialog_add_response(ADW_ALERT_DIALOG(dialog), "ok", "OK");
+    adw_alert_dialog_add_response(ADW_ALERT_DIALOG(dialog), "ok", _("OK"));
     adw_alert_dialog_set_default_response(ADW_ALERT_DIALOG(dialog), "ok");
     adw_dialog_present(dialog, GTK_WIDGET(self));
 }
@@ -85,7 +87,7 @@ static void ts_window_update_screen(TsWindow* self)
     g_object_get(self->model, "rom-name", &rom, "song-name", &song, nullptr);
 
     gtk_stack_set_visible_child_name(GTK_STACK(self->screens), rom != nullptr ? "player" : "setup");
-    adw_window_title_set_title(self->window_title, song != nullptr ? song : "Tabula Sonora");
+    adw_window_title_set_title(self->window_title, song != nullptr ? song : _("Tabula Sonora"));
 
     // Export lives in the menu rather than on a button, so this is what greys it out when there is
     // nothing to export. Song information is greyed out beside it, for the same reason: both are
@@ -116,15 +118,15 @@ void ts_window_open_file(TsWindow* self, GFile* file)
 
     g_autofree char* path = g_file_get_path(file);
     if (path == nullptr) {
-        ts_window_report(self, "That file could not be played",
-                         "The engine reads MIDI files from disk, and this one is not on a local "
-                         "filesystem.");
+        ts_window_report(self, _("That file could not be played"),
+                         _("The engine reads MIDI files from disk, and this one is not on a local "
+                           "filesystem."));
         return;
     }
 
     g_autoptr(GError) error = nullptr;
     if (!ts_player_model_load_song(self->model, path, &error)) {
-        ts_window_report(self, "That file could not be played", error->message);
+        ts_window_report(self, _("That file could not be played"), error->message);
         return;
     }
 
@@ -216,19 +218,19 @@ static void on_open(GSimpleAction*, GVariant*, gpointer user_data)
     auto* self = TS_WINDOW(user_data);
 
     GtkFileDialog* dialog = gtk_file_dialog_new();
-    gtk_file_dialog_set_title(dialog, "Open MIDI File");
+    gtk_file_dialog_set_title(dialog, _("Open MIDI File"));
 
     // Matched by extension rather than content type: most of these have no registered MIME type,
     // and the engine sniffs the contents itself on the way in anyway.
     GtkFileFilter* songs = gtk_file_filter_new();
-    gtk_file_filter_set_name(songs, "MIDI and legacy music files");
+    gtk_file_filter_set_name(songs, _("MIDI and legacy music files"));
     for (const char* pattern : {"*.mid", "*.midi", "*.rmi", "*.mids", "*.mus", "*.xmi", "*.xmf",
                                 "*.mxmf", "*.gmf", "*.hmi", "*.hmp", "*.lds"}) {
         gtk_file_filter_add_pattern(songs, pattern);
     }
 
     GtkFileFilter* all = gtk_file_filter_new();
-    gtk_file_filter_set_name(all, "All files");
+    gtk_file_filter_set_name(all, _("All files"));
     gtk_file_filter_add_pattern(all, "*");
 
     g_autoptr(GListStore) filters = g_list_store_new(GTK_TYPE_FILE_FILTER);
@@ -275,7 +277,7 @@ static void ts_window_rom_loaded(TsWindow* self, gboolean verified_fully, const 
         g_file_delete(destination, nullptr, nullptr);
         g_settings_set_boolean(self->settings, "rom-verified", FALSE);
 
-        ts_window_report(self, "That is not the right SCCore.dll", error->message);
+        ts_window_report(self, _("That is not the right SCCore.dll"), error->message);
         return;
     }
 
@@ -353,14 +355,14 @@ static void on_rom_chosen(GObject* source, GAsyncResult* result, gpointer user_d
     g_file_delete(staging, nullptr, nullptr);
 
     if (!g_file_copy(picked, staging, G_FILE_COPY_OVERWRITE, nullptr, nullptr, nullptr, &error)) {
-        ts_window_report(self, "That file could not be copied", error->message);
+        ts_window_report(self, _("That file could not be copied"), error->message);
         return;
     }
 
     if (!g_file_move(staging, destination, G_FILE_COPY_OVERWRITE, nullptr, nullptr, nullptr,
                      &error)) {
         g_file_delete(staging, nullptr, nullptr);
-        ts_window_report(self, "That file could not be installed", error->message);
+        ts_window_report(self, _("That file could not be installed"), error->message);
         return;
     }
 
@@ -373,7 +375,7 @@ static void on_import_rom(GSimpleAction*, GVariant*, gpointer user_data)
     auto* self = TS_WINDOW(user_data);
 
     GtkFileDialog* dialog = gtk_file_dialog_new();
-    gtk_file_dialog_set_title(dialog, "Choose SCCore.dll");
+    gtk_file_dialog_set_title(dialog, _("Choose SCCore.dll"));
 
     GtkFileFilter* filter = gtk_file_filter_new();
     gtk_file_filter_set_name(filter, "SCCore.dll");
@@ -417,7 +419,7 @@ static void on_export_finished(GObject* source, GAsyncResult* result, gpointer u
     g_clear_object(&self->export_cancellable);
 
     if (!ok && !g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
-        ts_window_report(self, "That song could not be exported", error->message);
+        ts_window_report(self, _("That song could not be exported"), error->message);
     }
 }
 
@@ -433,8 +435,8 @@ static void on_export_chosen(GObject* source, GAsyncResult* result, gpointer use
 
     g_autofree char* path = g_file_get_path(file);
     if (path == nullptr) {
-        ts_window_report(self, "That location cannot be written",
-                         "Choose somewhere on a local filesystem.");
+        ts_window_report(self, _("That location cannot be written"),
+                         _("Choose somewhere on a local filesystem."));
         return;
     }
 
@@ -457,7 +459,7 @@ static void on_export(GSimpleAction*, GVariant*, gpointer user_data)
     }
 
     GtkFileDialog* dialog = gtk_file_dialog_new();
-    gtk_file_dialog_set_title(dialog, "Export WAV");
+    gtk_file_dialog_set_title(dialog, _("Export WAV"));
 
     // The song's name with its extension swapped, which is almost always what is wanted.
     g_autofree char* stem = g_strdup(song);

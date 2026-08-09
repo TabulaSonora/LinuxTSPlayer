@@ -1,5 +1,7 @@
 #include "host/ts_session.hpp"
 
+#include "host/ts_i18n.hpp"
+
 #include "tabulasonora/engine_noise.hpp"
 #include "tabulasonora/patch_directory.hpp"
 #include "tabulasonora/sequence.hpp"
@@ -78,7 +80,11 @@ void Session::load_song(const std::string& path)
 {
     std::ifstream file{path, std::ios::binary};
     if (!file) {
-        throw std::runtime_error("Cannot read '" + file_name(path) + "'.");
+        // The message reaches the user: TsPlayerModel turns this into a GError and the window
+        // shows it as the body of an alert. Formatted whole rather than concatenated around the
+        // name, so a translator can put the quotes and the name where their language wants them.
+        /* TRANSLATORS: %s is the name of the file that could not be opened. */
+        throw std::runtime_error(format_text(TS_("Cannot read '%s'."), file_name(path).c_str()));
     }
 
     const std::vector<std::uint8_t> bytes{std::istreambuf_iterator<char>{file},
@@ -370,7 +376,9 @@ void Session::capture(SessionSnapshot& into) const
             if (drums) {
                 state.name = trimmed(notes_->drums().kit_name(kit));
                 if (state.name.empty() && kit >= 0) {
-                    state.name = "Kit " + std::to_string(kit);
+                    /* TRANSLATORS: %d is a GS drum kit number, used when the module gives the
+                       kit no name of its own. */
+                    state.name = format_text(TS_("Kit %d"), kit);
                 }
             } else {
                 const auto& directory = notes_->directory();
@@ -389,7 +397,7 @@ void Session::capture(SessionSnapshot& into) const
 Session::ExportPlan Session::plan_export() const
 {
     if (!notes_ || song_events_.empty()) {
-        throw std::runtime_error("Load a DLL and a song before exporting.");
+        throw std::runtime_error(TS_("Load a DLL and a song before exporting."));
     }
 
     ExportPlan plan;

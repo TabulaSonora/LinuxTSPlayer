@@ -3,6 +3,8 @@
 #include "app/ts-settings.hpp"
 #include "app/ts-tone-map.hpp"
 
+#include <glib/gi18n.h>
+
 #include <vector>
 
 struct _TsPrefsDialog {
@@ -125,15 +127,20 @@ static void ts_prefs_dialog_update_buffer_note(TsPrefsDialog* self)
     g_object_get(self->model, "underruns", &underruns, nullptr);
 
     if (underruns > 0) {
+        // %ld and a cast rather than G_GINT64_FORMAT: xgettext concatenates adjacent string
+        // literals but does not expand macros, so a msgid spliced together around one extracts as
+        // bare "%" -- silently, with no warning -- and the translation is never found. A dropout
+        // counter cannot approach the range where long and gint64 differ on any target we build
+        // for.
         g_autofree char* text = g_strdup_printf(
-            g_dngettext(nullptr, "%" G_GINT64_FORMAT " dropout so far",
-                        "%" G_GINT64_FORMAT " dropouts so far", static_cast<gulong>(underruns)),
-            underruns);
+            g_dngettext(nullptr, "%ld dropout so far", "%ld dropouts so far",
+                        static_cast<gulong>(underruns)),
+            static_cast<long>(underruns));
         gtk_label_set_text(GTK_LABEL(self->buffer_note), text);
         gtk_widget_remove_css_class(self->buffer_note, "dim-label");
         gtk_widget_add_css_class(self->buffer_note, "warning");
     } else {
-        gtk_label_set_text(GTK_LABEL(self->buffer_note), "No dropouts");
+        gtk_label_set_text(GTK_LABEL(self->buffer_note), _("No dropouts"));
         gtk_widget_remove_css_class(self->buffer_note, "warning");
         gtk_widget_add_css_class(self->buffer_note, "dim-label");
     }
@@ -156,15 +163,15 @@ AdwDialog* ts_prefs_dialog_new(TsPlayerModel* model)
     self->model = model;
     self->settings = ts_settings_get();
 
-    adw_dialog_set_title(ADW_DIALOG(self), "Preferences");
+    adw_dialog_set_title(ADW_DIALOG(self), _("Preferences"));
 
     auto* page = ADW_PREFERENCES_PAGE(adw_preferences_page_new());
-    adw_preferences_page_set_title(page, "Engine");
+    adw_preferences_page_set_title(page, _("Engine"));
     adw_preferences_page_set_icon_name(page, "applications-engineering-symbolic");
 
     // -- Voice --
     auto* voice = ADW_PREFERENCES_GROUP(adw_preferences_group_new());
-    adw_preferences_group_set_title(voice, "Voice");
+    adw_preferences_group_set_title(voice, _("Voice"));
 
     // Straight from the library, so a vintage added upstream appears here without being listed
     // twice.
@@ -173,31 +180,34 @@ AdwDialog* ts_prefs_dialog_new(TsPlayerModel* model)
         (void)name;
         maps.emplace_back(ts_tone_map_display_name(value), value);
     }
-    add_choice(voice, self->settings, "map", "Module",
-               "Which module's tone map program changes resolve against", maps);
+    add_choice(voice, self->settings, "map", _("Module"),
+               _("Which module's tone map program changes resolve against"), maps);
 
-    add_choice(voice, self->settings, "ports", "Parts", nullptr,
-               {{"16 (1 port)", 1}, {"32 (2 ports)", 2}, {"64 (4 ports)", 4}});
+    // Three separate msgids rather than one with a count: they are fixed labels, not a plural
+    // over a runtime number, and a language that inflects "port" differently at 2 and at 4 can say
+    // so here without a plural form to carry it.
+    add_choice(voice, self->settings, "ports", _("Parts"), nullptr,
+               {{_("16 (1 port)"), 1}, {_("32 (2 ports)"), 2}, {_("64 (4 ports)"), 4}});
 
-    add_choice(voice, self->settings, "polyphony", "Polyphony", nullptr,
-               {{"64 (hardware)", 64}, {"128", 128}, {"256", 256}});
+    add_choice(voice, self->settings, "polyphony", _("Polyphony"), nullptr,
+               {{_("64 (hardware)"), 64}, {"128", 128}, {"256", 256}});
 
     // The one setting here that is not a choice between two things the module does: it is a choice
     // between the module and the machine the module models. Worded from the side that is off by
     // default, because "on" is simply the engine behaving well and needs no explaining.
-    add_switch(voice, self->settings, "extended-interpolation", "Extended Interpolation",
-               "A wide band-limiting resampler with no pitch ceiling. Turn it off to reproduce "
-               "SCCore.dll exactly, including its aliasing and the glides it stalls.");
+    add_switch(voice, self->settings, "extended-interpolation", _("Extended Interpolation"),
+               _("A wide band-limiting resampler with no pitch ceiling. Turn it off to reproduce "
+                 "SCCore.dll exactly, including its aliasing and the glides it stalls."));
 
     adw_preferences_page_add(page, voice);
 
     // -- Effects --
     auto* effects = ADW_PREFERENCES_GROUP(adw_preferences_group_new());
-    adw_preferences_group_set_title(effects, "Effects");
-    add_switch(effects, self->settings, "reverb", "Reverb", nullptr);
-    add_switch(effects, self->settings, "chorus", "Chorus", nullptr);
-    add_switch(effects, self->settings, "delay", "Delay", nullptr);
-    add_switch(effects, self->settings, "efx", "Insertion Effects", nullptr);
+    adw_preferences_group_set_title(effects, _("Effects"));
+    add_switch(effects, self->settings, "reverb", _("Reverb"), nullptr);
+    add_switch(effects, self->settings, "chorus", _("Chorus"), nullptr);
+    add_switch(effects, self->settings, "delay", _("Delay"), nullptr);
+    add_switch(effects, self->settings, "efx", _("Insertion Effects"), nullptr);
     adw_preferences_page_add(page, effects);
 
     // No Output group. Gain used to be one, and now lives in the transport beside the buttons: it
@@ -206,16 +216,16 @@ AdwDialog* ts_prefs_dialog_new(TsPlayerModel* model)
 
     // -- Latency --
     auto* latency = ADW_PREFERENCES_GROUP(adw_preferences_group_new());
-    adw_preferences_group_set_title(latency, "Latency");
+    adw_preferences_group_set_title(latency, _("Latency"));
     adw_preferences_group_set_description(
-        latency, "How far ahead the engine renders. Lower answers a keyboard sooner; raise it if "
-                 "you hear dropouts.");
+        latency, _("How far ahead the engine renders. Lower answers a keyboard sooner; raise it "
+                   "if you hear dropouts."));
 
     auto* buffer_row = ADW_SPIN_ROW(adw_spin_row_new_with_range(10, 400, 5));
-    adw_preferences_row_set_title(ADW_PREFERENCES_ROW(buffer_row), "Buffer");
+    adw_preferences_row_set_title(ADW_PREFERENCES_ROW(buffer_row), _("Buffer"));
     g_settings_bind(self->settings, "latency-ms", buffer_row, "value", G_SETTINGS_BIND_DEFAULT);
 
-    self->buffer_note = gtk_label_new("No dropouts");
+    self->buffer_note = gtk_label_new(_("No dropouts"));
     gtk_widget_add_css_class(self->buffer_note, "caption");
     gtk_widget_add_css_class(self->buffer_note, "dim-label");
     gtk_widget_set_valign(self->buffer_note, GTK_ALIGN_CENTER);
@@ -226,10 +236,10 @@ AdwDialog* ts_prefs_dialog_new(TsPlayerModel* model)
 
     // -- MIDI --
     auto* midi = ADW_PREFERENCES_GROUP(adw_preferences_group_new());
-    adw_preferences_group_set_title(midi, "MIDI Input");
-    add_switch(midi, self->settings, "midi-auto-connect", "Connect Every Source",
-               "Subscribe to all readable sequencer ports. Leave this off when something else is "
-               "driving the synth, or it will echo back into it.");
+    adw_preferences_group_set_title(midi, _("MIDI Input"));
+    add_switch(midi, self->settings, "midi-auto-connect", _("Connect Every Source"),
+               _("Subscribe to all readable sequencer ports. Leave this off when something else is "
+                 "driving the synth, or it will echo back into it."));
     adw_preferences_page_add(page, midi);
 
     adw_preferences_dialog_add(ADW_PREFERENCES_DIALOG(self), page);

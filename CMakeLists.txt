@@ -202,6 +202,31 @@ pkg_check_modules(ALSA REQUIRED IMPORTED_TARGET alsa)
 find_program(GLIB_COMPILE_RESOURCES glib-compile-resources REQUIRED)
 find_program(GLIB_COMPILE_SCHEMAS glib-compile-schemas REQUIRED)
 
+# ---------------------------------------------------------------------------------------------
+# Translations
+#
+# find_program rather than pkg-config on purpose: this block would otherwise have to live outside
+# the PKG_CONFIG_LIBDIR window above, and the gettext tools are programs we invoke, not libraries
+# we link. On glibc there is nothing to link at all -- dgettext and friends are in libc -- so there
+# is deliberately no find_package(Intl) here. It would resolve to an empty target and buy only a
+# portability trap for a platform this application does not target.
+# ---------------------------------------------------------------------------------------------
+
+option(TSGUI_ENABLE_NLS "Build and install translations" ON)
+
+find_program(MSGFMT msgfmt)
+find_program(XGETTEXT xgettext)
+find_program(MSGMERGE msgmerge)
+
+if(TSGUI_ENABLE_NLS AND NOT MSGFMT)
+    message(WARNING "msgfmt not found; building without translations")
+    set(TSGUI_ENABLE_NLS OFF)
+endif()
+
+# The domain, which has to agree in four places: bindtextdomain in main.cpp, the TS_() macro in the
+# host layer, gettext-domain on the gschema's <schemalist>, and the .mo install path.
+set(TSGUI_GETTEXT_PACKAGE "${TSGUI_BINARY_NAME}")
+
 # miniaudio is a single header; the implementation lives in one translation unit of ours.
 #
 # PATH_SUFFIXES because distributions disagree about where it goes: vcpkg installs it as
@@ -241,6 +266,10 @@ if(TSGUI_HAVE_FILE_PREFIX_MAP)
 endif()
 
 add_subdirectory(src)
+
+# Before data/, which merges the catalogues into the desktop entry, the AppStream metainfo and the
+# MIME definitions and so needs TSGUI_PO_DIR and TSGUI_PO_FILES from here.
+add_subdirectory(po)
 add_subdirectory(data)
 
 if(TSGUI_BUILD_TESTS)

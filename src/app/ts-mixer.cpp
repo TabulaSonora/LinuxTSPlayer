@@ -3,6 +3,8 @@
 #include "app/ts-part-object.hpp"
 #include "app/ts-part-row.hpp"
 
+#include <glib/gi18n.h>
+
 struct _TsMixer {
     GtkWidget parent_instance;
 
@@ -136,8 +138,8 @@ static void ts_mixer_init(TsMixer* self)
 
     AdwStatusPage* empty = ADW_STATUS_PAGE(adw_status_page_new());
     adw_status_page_set_icon_name(empty, "audio-x-generic-symbolic");
-    adw_status_page_set_title(empty, "No Parts");
-    adw_status_page_set_description(empty, "Open a MIDI file to see the parts it addresses.");
+    adw_status_page_set_title(empty, _("No Parts"));
+    adw_status_page_set_description(empty, _("Open a MIDI file to see the parts it addresses."));
     gtk_stack_add_named(GTK_STACK(self->stack), GTK_WIDGET(empty), "empty");
 }
 

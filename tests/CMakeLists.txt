@@ -30,11 +30,16 @@ add_executable(ts-song-info-test ts_song_info_test.cpp)
 target_link_libraries(ts-song-info-test PRIVATE tsgui_host tsgui_warnings)
 add_test(NAME song-info COMMAND ts-song-info-test)
 
+# These three validate the generated artefacts rather than the sources, which is the point: what
+# ships is the file msgfmt has merged the catalogues into, and a translation can break validation
+# on its own. They are build-time outputs of the tsgui-metadata target, which is in ALL, so a plain
+# `cmake --build` before ctest is enough -- but ctest alone against a never-built tree will not
+# find them.
 find_program(DESKTOP_FILE_VALIDATE desktop-file-validate)
 if(DESKTOP_FILE_VALIDATE)
     add_test(NAME desktop-file
         COMMAND "${DESKTOP_FILE_VALIDATE}"
-                "${CMAKE_BINARY_DIR}/data/${TSGUI_APP_ID}.desktop")
+                "${CMAKE_BINARY_DIR}/data/merged/${TSGUI_APP_ID}.desktop")
 endif()
 
 find_program(XDG_MIME xdg-mime)
@@ -49,7 +54,7 @@ find_file(FREEDESKTOP_MIME freedesktop.org.xml
 if(UPDATE_MIME_DATABASE AND XDG_MIME AND FREEDESKTOP_MIME)
     add_test(NAME mime-types
         COMMAND "${CMAKE_COMMAND}"
-                -DMIME_XML=${CMAKE_SOURCE_DIR}/data/${TSGUI_APP_ID}.mime.xml
+                -DMIME_XML=${CMAKE_BINARY_DIR}/data/merged/${TSGUI_APP_ID}.mime.xml
                 -DUPDATE_MIME_DATABASE=${UPDATE_MIME_DATABASE}
                 -DXDG_MIME=${XDG_MIME}
                 -DBASE_MIME=${FREEDESKTOP_MIME}
@@ -61,7 +66,7 @@ find_program(APPSTREAM_UTIL appstream-util)
 if(APPSTREAM_UTIL)
     add_test(NAME metainfo
         COMMAND "${APPSTREAM_UTIL}" validate-relax
-                "${CMAKE_BINARY_DIR}/data/${TSGUI_APP_ID}.metainfo.xml")
+                "${CMAKE_BINARY_DIR}/data/merged/${TSGUI_APP_ID}.metainfo.xml")
 endif()
 
 # --- The engine, which does ----------------------------------------------------------------------

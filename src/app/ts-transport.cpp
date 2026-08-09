@@ -2,6 +2,8 @@
 
 #include "app/ts-settings.hpp"
 
+#include <glib/gi18n.h>
+
 #include <cmath>
 #include <initializer_list>
 
@@ -90,10 +92,11 @@ static void ts_transport_sync(TsTransport* self)
 
     const gboolean has_song = song != nullptr;
 
-    gtk_label_set_text(GTK_LABEL(self->title), has_song ? song : "No file open");
+    gtk_label_set_text(GTK_LABEL(self->title), has_song ? song : _("No file open"));
 
     if (rom != nullptr) {
-        g_autofree char* subtitle = g_strdup_printf("Sound Canvas voice · %s", rom);
+        /* TRANSLATORS: %s is the module the file is being played on, e.g. "SC-8820". */
+        g_autofree char* subtitle = g_strdup_printf(_("Sound Canvas voice · %s"), rom);
         gtk_label_set_text(GTK_LABEL(self->subtitle), subtitle);
     } else {
         gtk_label_set_text(GTK_LABEL(self->subtitle), "");
@@ -119,7 +122,10 @@ static void ts_transport_sync(TsTransport* self)
 
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(self->loop), looping);
 
-    g_autofree char* count = g_strdup_printf("%d/%d voices", voices, capacity);
+    /* TRANSLATORS: sounding voices over the polyphony ceiling, e.g. "12/64 voices". Deliberately
+       one form rather than a plural: the noun agrees with the ceiling, not with the first number,
+       so "1/64 voice" would be wrong. */
+    g_autofree char* count = g_strdup_printf(_("%d/%d voices"), voices, capacity);
     gtk_label_set_text(GTK_LABEL(self->voices), count);
 
     gtk_widget_set_visible(self->xg, xg);
@@ -138,10 +144,11 @@ static void ts_transport_sync(TsTransport* self)
 
     gtk_widget_set_visible(self->dropouts, underruns > 0);
     if (underruns > 0) {
+        // %ld rather than G_GINT64_FORMAT; see the same construction in ts-prefs-dialog.cpp for why
+        // a macro inside the msgid defeats extraction.
         g_autofree char* text = g_strdup_printf(
-            g_dngettext(nullptr, "%" G_GINT64_FORMAT " dropout", "%" G_GINT64_FORMAT " dropouts",
-                        static_cast<gulong>(underruns)),
-            underruns);
+            g_dngettext(nullptr, "%ld dropout", "%ld dropouts", static_cast<gulong>(underruns)),
+            static_cast<long>(underruns));
         gtk_label_set_text(GTK_LABEL(self->dropouts), text);
     }
 
@@ -196,7 +203,9 @@ static void on_gain_changed(GtkAdjustment* adjustment, gpointer user_data)
 {
     auto* self = TS_TRANSPORT(user_data);
     const double gain = gtk_adjustment_get_value(adjustment);
-    g_autofree char* text = g_strdup_printf("%d%%", static_cast<int>(gain * 100.0 + 0.5));
+    /* TRANSLATORS: a percentage of the engine's own output level. Some locales put a space
+       before the sign. */
+    g_autofree char* text = g_strdup_printf(_("%d%%"), static_cast<int>(gain * 100.0 + 0.5));
     gtk_label_set_text(GTK_LABEL(self->gain_readout), text);
 }
 
@@ -217,7 +226,7 @@ static gboolean on_play_query_tooltip(GtkWidget*, int, int, gboolean, GtkTooltip
     auto* self = TS_TRANSPORT(user_data);
     gboolean playing = FALSE;
     g_object_get(self->model, "playing", &playing, nullptr);
-    gtk_tooltip_set_text(tooltip, playing ? "Pause" : "Play");
+    gtk_tooltip_set_text(tooltip, playing ? _("Pause") : _("Play"));
     return TRUE;
 }
 
@@ -262,7 +271,7 @@ static void ts_transport_init(TsTransport* self)
     // -- Heading --
     GtkWidget* heading = gtk_box_new(GTK_ORIENTATION_VERTICAL, 2);
 
-    self->title = gtk_label_new("No file open");
+    self->title = gtk_label_new(_("No file open"));
     gtk_widget_add_css_class(self->title, "heading");
     gtk_label_set_xalign(GTK_LABEL(self->title), 0.0F);
     gtk_label_set_ellipsize(GTK_LABEL(self->title), PANGO_ELLIPSIZE_MIDDLE);
@@ -285,8 +294,8 @@ static void ts_transport_init(TsTransport* self)
     gtk_scale_set_draw_value(GTK_SCALE(self->scale), FALSE);
     gtk_widget_set_hexpand(self->scale, TRUE);
     gtk_widget_set_tooltip_text(self->scale,
-                                "Seek. Jumping replays the controllers up to that point, so the "
-                                "parts sound as they would have.");
+                                _("Seek. Jumping replays the controllers up to that point, so "
+                                  "the parts sound as they would have."));
     gtk_box_append(GTK_BOX(seek), self->scale);
 
     GtkWidget* times = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
@@ -318,21 +327,22 @@ static void ts_transport_init(TsTransport* self)
     gtk_box_append(GTK_BOX(controls), self->play);
 
     gtk_box_append(GTK_BOX(controls),
-                   icon_button("media-skip-backward-symbolic", "Go back to the start", "win.rewind"));
+                   icon_button("media-skip-backward-symbolic", _("Go back to the start"),
+                               "win.rewind"));
 
     self->loop = gtk_toggle_button_new();
     gtk_button_set_icon_name(GTK_BUTTON(self->loop), "media-playlist-repeat-symbolic");
     gtk_widget_add_css_class(self->loop, "flat");
     gtk_widget_set_tooltip_text(
         self->loop,
-        "Repeat at the file's own loop points, or over the whole file if it declares none");
+        _("Repeat at the file's own loop points, or over the whole file if it declares none"));
     g_signal_connect(self->loop, "toggled", G_CALLBACK(on_loop_toggled), self);
     gtk_box_append(GTK_BOX(controls), self->loop);
 
     gtk_box_append(GTK_BOX(controls),
                    icon_button("dialog-warning-symbolic",
-                               "Panic: silence every voice and return each part to its power-on "
-                               "state",
+                               _("Panic: silence every voice and return each part to its "
+                                 "power-on state"),
                                "win.panic"));
 
     GtkWidget* spacer = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
@@ -348,8 +358,8 @@ static void ts_transport_init(TsTransport* self)
     // file is playing. Reaching for it through a menu and a dialog for that is a mismatch.
     GtkWidget* gain_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
     gtk_widget_set_tooltip_text(gain_box,
-                                "Gain on the finished mix. 100% is the engine's own level; above "
-                                "it a loud file can clip.");
+                                _("Gain on the finished mix. 100% is the engine's own level; "
+                                  "above it a loud file can clip."));
 
     GtkWidget* gain_icon = gtk_image_new_from_icon_name("audio-volume-high-symbolic");
     gtk_widget_add_css_class(gain_icon, "dim-label");
@@ -390,7 +400,10 @@ static void ts_transport_init(TsTransport* self)
     gtk_range_set_round_digits(GTK_RANGE(self->gain), 2);
     gtk_box_append(GTK_BOX(gain_box), self->gain);
 
-    self->gain_readout = gtk_label_new("100%");
+    // Built from the same format string the handler uses, so unity cannot be punctuated one way
+    // here and another way the moment the slider moves.
+    g_autofree char* unity_gain = g_strdup_printf(_("%d%%"), 100);
+    self->gain_readout = gtk_label_new(unity_gain);
     gtk_widget_add_css_class(self->gain_readout, "caption");
     gtk_widget_add_css_class(self->gain_readout, "numeric");
     gtk_widget_add_css_class(self->gain_readout, "dim-label");
@@ -410,7 +423,7 @@ static void ts_transport_init(TsTransport* self)
     // keeping it from ever reaching the narrow sizes the interface claims to support.
     GtkWidget* exporting = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
 
-    GtkWidget* exporting_label = gtk_label_new("Exporting…");
+    GtkWidget* exporting_label = gtk_label_new(_("Exporting…"));
     gtk_widget_add_css_class(exporting_label, "caption");
     gtk_widget_add_css_class(exporting_label, "dim-label");
     gtk_label_set_ellipsize(GTK_LABEL(exporting_label), PANGO_ELLIPSIZE_END);
@@ -433,7 +446,10 @@ static void ts_transport_init(TsTransport* self)
     // -- Status --
     GtkWidget* status = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 12);
 
-    self->voices = gtk_label_new("0/0 voices");
+    // Through the same format string as the live readout, so the placeholder cannot end up
+    // worded differently from what replaces it a tenth of a second later.
+    g_autofree char* no_voices = g_strdup_printf(_("%d/%d voices"), 0, 0);
+    self->voices = gtk_label_new(no_voices);
     gtk_widget_add_css_class(self->voices, "caption");
     gtk_widget_add_css_class(self->voices, "dim-label");
     gtk_widget_add_css_class(self->voices, "numeric");
@@ -443,7 +459,7 @@ static void ts_transport_init(TsTransport* self)
     gtk_widget_add_css_class(self->xg, "caption-heading");
     gtk_widget_add_css_class(self->xg, "accent");
     gtk_widget_set_visible(self->xg, FALSE);
-    gtk_widget_set_tooltip_text(self->xg, "The file put the engine into XG mode");
+    gtk_widget_set_tooltip_text(self->xg, _("The file put the engine into XG mode"));
     gtk_box_append(GTK_BOX(status), self->xg);
 
     GtkWidget* status_spacer = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
@@ -455,8 +471,8 @@ static void ts_transport_init(TsTransport* self)
     gtk_widget_add_css_class(self->dropouts, "warning");
     gtk_widget_set_visible(self->dropouts, FALSE);
     gtk_widget_set_tooltip_text(self->dropouts,
-                                "The engine could not keep the buffer fed. Raise the buffer in "
-                                "Preferences.");
+                                _("The engine could not keep the buffer fed. Raise the buffer "
+                                  "in Preferences."));
     gtk_box_append(GTK_BOX(status), self->dropouts);
 
     gtk_box_append(GTK_BOX(box), status);

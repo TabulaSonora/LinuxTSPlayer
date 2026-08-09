@@ -1,0 +1,28 @@
+# Every file xgettext scans, relative to the source root.
+#
+# No --its or --language flags are needed for any of these: xgettext strips a trailing .in and then
+# recognises each one from its name and root element, so a single pass over the whole mixed list
+# produces one template with the occurrences merged across formats.
+
+data/co.losno.TabulaSonoraPlayer.desktop.in
+data/co.losno.TabulaSonoraPlayer.metainfo.xml.in
+data/co.losno.TabulaSonoraPlayer.mime.xml
+data/co.losno.TabulaSonoraPlayer.gschema.xml
+data/ui/window.ui
+
+src/app/main.cpp
+src/app/ts-application.cpp
+src/app/ts-mixer.cpp
+src/app/ts-part-object.cpp
+src/app/ts-part-row.cpp
+src/app/ts-prefs-dialog.cpp
+src/app/ts-rom-setup.cpp
+src/app/ts-song-info-window.cpp
+src/app/ts-transport.cpp
+src/app/ts-voice-meter.cpp
+src/app/ts-window.cpp
+
+# The host layer has no GTK, but it does produce prose the user reads: the messages behind the
+# error dialogs, the evidence under the "Asks For" verdict, and the key signature. Those use TS_().
+src/host/ts_session.cpp
+src/host/ts_song_info.cpp

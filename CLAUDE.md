@@ -28,6 +28,8 @@ GSETTINGS_SCHEMA_DIR=build/dev/data ./build/dev/src/tabula-sonora-player [file.m
 ```
 
 The `GSETTINGS_SCHEMA_DIR` is required for an uninstalled run — the app aborts without its schema.
+`TS_LOCALE_DIR=build/dev/po/locale` alongside it is what makes an uninstalled run translated;
+without it the catalogues are looked for under the install prefix and the app stays English.
 
 Other presets: `release` (RelWithDebInfo), `asan`, `tsan`.
 
@@ -41,6 +43,8 @@ ctest --preset tsan                # the "ring" label only: host-smoke under Thr
 tools/shoot.sh out.png [w] [h] [settle]   # screenshot on a throwaway Xvfb display + profile
                                           # TS_FILE, TS_ROM, TS_ACTION drive what is captured
 tools/build-icons.sh                      # regenerate hicolor PNGs from the Icon Composer master
+
+cmake --build --preset dev --target update-po   # rescan strings, merge into every po/*.po
 
 flatpak-builder --user --install --force-clean build-flatpak \
     packaging/flatpak/co.losno.TabulaSonoraPlayer.yml
@@ -127,7 +131,38 @@ anywhere, because several headers carry C++ types (spans, references to engine s
 
 gschema, desktop entry, metainfo, GResource, icons, and `*.mime.xml` for the legacy container
 formats `shared-mime-info` does not know (without it those desktop associations are unreachable).
-`.desktop.in`/`.metainfo.xml.in` are `configure_file`d, so edit the `.in`.
+
+`.desktop.in`/`.metainfo.xml.in` are `configure_file`d into `gen/`, then `msgfmt --desktop`/`--xml`
+merges the catalogues into the copy that installs; `.mime.xml` skips the first stage, having no
+placeholders. Edit the `.in`. **No `@VAR@` may appear inside a translatable field** — msgids come
+from the source while the merge template is the configured copy, and the two only agree while
+substitution never touches translated text. Breaking that drops the translation silently rather
+than failing the build.
+
+An XML comment here cannot contain `--`. `glib-compile-schemas` tolerates it, libxml2 does not, and
+`xgettext` responds by falling back to its C scanner and extracting *nothing at all* from the file,
+with no error.
+
+### 4. `po/` — translations
+
+One catalogue per language plus `LINGUAS` and `POTFILES.in`; domain `tabula-sonora-player`, which
+has to agree in four places (`bindtextdomain` in `main.cpp`, `TS_()` in the host, `gettext-domain`
+on the gschema's `<schemalist>`, and the `.mo` install path). `update-pot`/`update-po` are
+maintainer targets kept out of `ALL`, because regenerating the template rewrites its timestamp and
+would dirty the tree on a no-op build. `.mo` compilation *is* in the build.
+
+The keyword list in `po/CMakeLists.txt` is load-bearing: xgettext's defaults recognise none of `_`,
+`N_`, `C_`, `Q_`, `g_dgettext` or `g_dngettext`, and anything missing from it is absent from the
+template without a warning. For the same reason a msgid must be one literal — a macro spliced into
+it (`"%" G_GINT64_FORMAT " dropout"`) extracts as bare `"%"`, silently.
+
+`src/host/` is exempt from the no-GTK rule only for `<libintl.h>`: `ts_i18n.hpp` gives it `TS_()`
+bound explicitly to the domain, so its dialog messages and the song-information prose translate
+without the layer gaining glib. Its names are deliberately not `_`/`N_`, which would collide with
+`<glib/gi18n.h>` in any file including both.
+
+Tone and drum-kit names, module designations and SysEx message names are never translated; they are
+the module's own display text and have to match the patch charts.
 
 ### Adding an engine setting
 
@@ -136,6 +171,9 @@ gschema key → `TSEngineSettings` in `host/ts_types.h` (+ `TSEngineSettingsDefa
 Values that cost no rebuild (looping, latency, MIDI auto-connect) are applied beside the struct via
 `g_object_set`, not through it — latency in particular must not rebuild, since the ring is sized
 once for `max_latency_ms` and this only moves the fill target inside it.
+
+Then `cmake --build --preset dev --target update-po`: the key's `<summary>`/`<description>` and the
+row's title and subtitle are four new strings, and nothing rescans the sources on its own.
 
 ## Conventions
 

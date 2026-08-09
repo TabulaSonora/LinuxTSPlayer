@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<schemalist>
+<!--
+  gettext-domain is what makes the summaries and descriptions below translate at runtime, in
+  dconf-editor and in Settings search. Extraction does not need it, because xgettext takes every
+  <summary> and <description> regardless, so without it the strings would be translated in the
+  catalogue and then never looked up.
+
+  Note that an XML comment cannot contain a double hyphen. glib-compile-schemas tolerates one
+  because GMarkup is lenient, but libxml2 does not, and xgettext silently falls back to its C
+  scanner and extracts nothing at all from this file.
+-->
+<schemalist gettext-domain="tabula-sonora-player">
   <!--
     One key per field rather than a serialised settings blob, which is the Apple front end's
     deliberate choice and worth keeping: a field added later falls back to its own default instead
@@ -92,7 +102,7 @@
     <!--
       Tall enough for the transport and all sixteen parts of a General MIDI score at once, which is
       what the mixer is for: a strip measures about 32px, so sixteen of them plus the transport and
-      the header bar come to a little over 800. Safe on a short screen even so -- GTK clamps a
+      the header bar come to a little over 800. Safe on a short screen even so, because GTK clamps a
       window's default size to the monitor's work area, so a 768px laptop gets a window that fits it
       rather than one hanging off the bottom.
     -->

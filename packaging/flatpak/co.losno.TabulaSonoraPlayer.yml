@@ -18,6 +18,16 @@ runtime-version: '50'
 sdk: org.gnome.Sdk
 command: tabula-sonora-player
 
+# Keep the catalogues in the application itself rather than in a .Locale extension.
+#
+# flatpak-builder splits /app/share/locale out into a separate ref by default, which is right for a
+# repository a user installs from: the extension carries every language and the client downloads
+# only the ones the machine is set to. It is wrong for the single-file bundle CI publishes on every
+# push, because `flatpak build-bundle` is given one ref -- the application -- and the extension is
+# simply not in the file. Everyone installing a release .flatpak would get an untranslated app.
+# Two catalogues cost a few kilobytes, so there is nothing to save by being clever here.
+separate-locales: false
+
 finish-args:
   - --socket=wayland
   - --socket=fallback-x11

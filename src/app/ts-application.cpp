@@ -2,6 +2,8 @@
 
 #include "app/ts-window.hpp"
 
+#include <glib/gi18n.h>
+
 struct _TsApplication {
     AdwApplication parent_instance;
 };
@@ -69,13 +71,19 @@ static void on_about(GSimpleAction* action, GVariant* parameter, gpointer user_d
     auto* application = GTK_APPLICATION(user_data);
     AdwDialog* about = adw_about_dialog_new();
 
-    adw_about_dialog_set_application_name(ADW_ABOUT_DIALOG(about), "Tabula Sonora");
+    adw_about_dialog_set_application_name(ADW_ABOUT_DIALOG(about), _("Tabula Sonora"));
     adw_about_dialog_set_application_icon(ADW_ABOUT_DIALOG(about), TSGUI_APP_ID);
     adw_about_dialog_set_version(ADW_ABOUT_DIALOG(about), TSGUI_VERSION);
     adw_about_dialog_set_license_type(ADW_ABOUT_DIALOG(about), GTK_LICENSE_BSD_3);
     adw_about_dialog_set_comments(
         ADW_ABOUT_DIALOG(about),
-        "Plays MIDI files through a native reimplementation of the Roland Sound Canvas VA voice.");
+        _("Plays MIDI files through a native reimplementation of the Roland Sound Canvas VA "
+          "voice."));
+
+    // The conventional gettext hook: each catalogue translates the marker to its own translators,
+    // one per line, and libadwaita shows the result on the Credits page. A catalogue that leaves it
+    // untranslated gets no page rather than a page reading "translator-credits".
+    adw_about_dialog_set_translator_credits(ADW_ABOUT_DIALOG(about), _("translator-credits"));
 
     // The organisation rather than this repository, because the thing a reader is looking for is
     // rarely only this one: the player, the engine it renders through and the SwiftUI port it was
@@ -89,10 +97,10 @@ static void on_about(GSimpleAction* action, GVariant* parameter, gpointer user_d
     // GTK_LICENSE_CUSTOM, not GTK_LICENSE_UNKNOWN: the custom text is only rendered for the custom
     // type, and with UNKNOWN the section shows its heading and nothing under it.
     adw_about_dialog_add_legal_section(
-        ADW_ABOUT_DIALOG(about), "Sound Canvas Voice", nullptr, GTK_LICENSE_CUSTOM,
-        "Reimplemented from a licensed copy of SCCore.dll, which is read as data and never loaded "
-        "as code. Reverb and chorus coefficients are Roland-derived; see the NOTICE file "
-        "distributed with this program.");
+        ADW_ABOUT_DIALOG(about), _("Sound Canvas Voice"), nullptr, GTK_LICENSE_CUSTOM,
+        _("Reimplemented from a licensed copy of SCCore.dll, which is read as data and never "
+          "loaded as code. Reverb and chorus coefficients are Roland-derived; see the NOTICE file "
+          "distributed with this program."));
 
     // The engine's commit, on the Details page beside the version.
     //
@@ -104,7 +112,8 @@ static void on_about(GSimpleAction* action, GVariant* parameter, gpointer user_d
     // hash worth showing: it lands on the change itself. Seven characters in the title, as git
     // abbreviates them, with the whole hash carried in the URL for anyone who needs it exact.
     if (TSGUI_NATIVETS_COMMIT[0] != '\0') {
-        char* title = g_strdup_printf("Sound Canvas Voice Engine (%.7s)", TSGUI_NATIVETS_COMMIT);
+        /* TRANSLATORS: %.7s is the engine's abbreviated git commit hash. */
+        char* title = g_strdup_printf(_("Sound Canvas Voice Engine (%.7s)"), TSGUI_NATIVETS_COMMIT);
         char* url = g_strdup_printf("https://github.com/TabulaSonora/NativeTS/commit/%s",
                                     TSGUI_NATIVETS_COMMIT);
 
@@ -115,7 +124,7 @@ static void on_about(GSimpleAction* action, GVariant* parameter, gpointer user_d
     } else {
         // Built from a tarball, or from an installed engine: there is no commit to name, and a row
         // reading "unknown" would be worse than one that simply goes to the project.
-        adw_about_dialog_add_link(ADW_ABOUT_DIALOG(about), "Sound Canvas Voice Engine",
+        adw_about_dialog_add_link(ADW_ABOUT_DIALOG(about), _("Sound Canvas Voice Engine"),
                                   "https://github.com/TabulaSonora/NativeTS");
     }
 

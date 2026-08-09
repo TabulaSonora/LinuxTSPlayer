@@ -4,7 +4,10 @@
 
 #include "tabulasonora/sequence.hpp"
 
+#include <glib/gi18n.h>
+
 #include <string>
+#include <vector>
 
 struct _TsPart {
     GObject parent_instance;
@@ -148,7 +151,9 @@ namespace {
 void format_address(int port, int channel, char** label, char** spelled)
 {
     *label = g_strdup_printf("%c%d", 'A' + port, channel + 1);
-    *spelled = g_strdup_printf("Port %c, channel %d", 'A' + port, channel + 1);
+    /* TRANSLATORS: the spelled-out form of a mixer address like "A1", read by screen readers.
+       %c is the port letter A-D and %d the 1-based channel. */
+    *spelled = g_strdup_printf(_("Port %c, channel %d"), 'A' + port, channel + 1);
 }
 
 } // namespace
@@ -220,7 +225,13 @@ std::string tags_for(const ts::host::PartState& state)
     std::string tags;
 
     if (state.drums) {
-        tags = state.kit >= 0 ? "Kit " + std::to_string(state.kit) : "Drums";
+        if (state.kit >= 0) {
+            /* TRANSLATORS: %d is a GS drum kit number, as the module's own display shows it. */
+            g_autofree char* kit = g_strdup_printf(_("Kit %d"), state.kit);
+            tags = kit;
+        } else {
+            tags = _("Drums");
+        }
     }
 
     const char* map = ts_tone_map_display_name(state.map);
@@ -244,20 +255,45 @@ std::string tags_for(const ts::host::PartState& state)
 /// the MSB carries the variation and the LSB names the vintage.
 std::string detail_for(const ts::host::PartState& state)
 {
-    std::string detail;
+    // Whole clauses, each formatted in one piece, rather than a sentence grown by +=. The joining
+    // is the only thing left to do here because a translator cannot reorder around an append: what
+    // reads "Program 1 (PC 0)" in English puts the number first in some languages and last in
+    // others, and only a complete format string lets them say so.
+    std::vector<std::string> clauses;
 
     if (state.drums && state.kit >= 0) {
-        detail += "Drum kit " + std::to_string(state.kit) + " · ";
+        /* TRANSLATORS: %d is a GS drum kit number. */
+        g_autofree char* kit = g_strdup_printf(_("Drum kit %d"), state.kit);
+        clauses.emplace_back(kit);
     }
 
-    detail += "Program " + std::to_string(state.program + 1) + " (PC " + std::to_string(state.program)
-              + ")";
-    detail += " · Bank MSB " + std::to_string(state.bank) + ", LSB " + std::to_string(state.bankLsb);
+    /* TRANSLATORS: the first %d is the program counted from one, as every patch chart counts
+       it; the second is the raw zero-based byte on the wire, for comparing with a MIDI capture. */
+    g_autofree char* program = g_strdup_printf(_("Program %d (PC %d)"), state.program + 1,
+                                               state.program);
+    clauses.emplace_back(program);
+
+    /* TRANSLATORS: the two halves of a MIDI bank select. Neither identifies a bank alone: on this
+       module the MSB carries the variation and the LSB names the vintage. */
+    g_autofree char* bank = g_strdup_printf(_("Bank MSB %d, LSB %d"), state.bank, state.bankLsb);
+    clauses.emplace_back(bank);
 
     // Under XG the melodic lookup is not given the bank the part was sent, so saying only what was
     // sent would misdescribe what is sounding.
     if (!state.drums && state.lookupBank != state.bank) {
-        detail += " (resolves against bank " + std::to_string(state.lookupBank) + ")";
+        /* TRANSLATORS: %d is the bank the module actually looks the tone up in, which under XG is
+           not the bank the part was sent. */
+        g_autofree char* resolved = g_strdup_printf(_("(resolves against bank %d)"),
+                                                    state.lookupBank);
+        clauses.emplace_back(resolved);
+    }
+
+    std::string detail;
+    for (const std::string& clause : clauses) {
+        if (!detail.empty()) {
+            detail += " · ";
+        }
+        detail += clause;
     }
 
     return detail;

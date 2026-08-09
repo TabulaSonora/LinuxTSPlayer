@@ -1,11 +1,14 @@
 #include "host/ts_song_info.hpp"
 
+#include "host/ts_i18n.hpp"
+
 #include "tabulasonora/midi_formats.hpp"
 #include "tabulasonora/smf_reader.hpp"
 
 #include <algorithm>
 #include <array>
 #include <cstddef>
+#include <string>
 #include <utility>
 
 namespace ts::host {
@@ -322,7 +325,7 @@ SongVintage decide(const Declarations& declared, const std::vector<int>& bank_ls
     };
 
     if (declared.xg) {
-        note("XG System On");
+        note(TS_("XG System On"));
         return SongVintage::xg;
     }
 
@@ -330,10 +333,10 @@ SongVintage decide(const Declarations& declared, const std::vector<int>& bank_ls
         // The floor: GS begins with the SC-55, and System Mode Set does not exist before the SC-88.
         SongVintage vintage = declared.system_mode_set ? SongVintage::sc88 : SongVintage::sc55;
         if (declared.gs_reset) {
-            note("GS Reset");
+            note(TS_("GS Reset"));
         }
         if (declared.system_mode_set) {
-            note("System Mode Set, which no SC-55 has");
+            note(TS_("System Mode Set, which no SC-55 has"));
         }
 
         int highest = 0;
@@ -351,17 +354,18 @@ SongVintage decide(const Declarations& declared, const std::vector<int>& bank_ls
             if (static_cast<int>(selected) > static_cast<int>(vintage)) {
                 vintage = selected;
             }
-            note("bank select LSB " + std::to_string(highest));
+            /* TRANSLATORS: %d is a bank select LSB value, 1-4, which names a module vintage. */
+            note(format_text(TS_("bank select LSB %d"), highest));
         }
         return vintage;
     }
 
     if (declared.gm2) {
-        note("General MIDI 2 System On");
+        note(TS_("General MIDI 2 System On"));
         return SongVintage::gm2;
     }
     if (declared.gm) {
-        note("General MIDI System On");
+        note(TS_("General MIDI System On"));
         return SongVintage::gm;
     }
     return SongVintage::unstated;
@@ -542,7 +546,15 @@ std::string format_key_signature(std::span<const std::uint8_t> data)
                                                         "A#"};
     const auto index = static_cast<std::size_t>(accidentals + 7);
     const char* tonic = minor ? minors[index] : majors[index];
-    return std::string{tonic} + (minor ? " minor" : " major");
+
+    // A whole format string per mode rather than a suffix appended to the tonic. The note name is
+    // not the start of the phrase everywhere: Japanese writes the mode around it, and German and
+    // the Nordic languages rename the note itself, neither of which a concatenated " minor" allows.
+    /* TRANSLATORS: %s is a note name like "C" or "F#". This is a minor key signature. */
+    return format_text(minor ? TS_("%s minor")
+                             /* TRANSLATORS: %s is a note name. This is a major key signature. */
+                             : TS_("%s major"),
+                       tonic);
 }
 
 // -- Soft Karaoke ----------------------------------------------------------------------------------

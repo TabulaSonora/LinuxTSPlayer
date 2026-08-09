@@ -4,6 +4,8 @@
 
 #include "tabulasonora/sequence.hpp"
 
+#include <glib/gi18n.h>
+
 #include <cstdlib>
 #include <string>
 
@@ -82,15 +84,22 @@ bool fader_accepts(Fader& fader, int value)
 std::string pan_text(int pan)
 {
     if (pan <= 0) {
-        return "Pan random, set by SysEx";
+        return _("Pan random, set by SysEx");
     }
 
     const int offset = pan - 64;
     if (offset == 0) {
-        return "Pan centre";
+        return _("Pan centre");
     }
 
-    return std::string{"Pan "} + (offset < 0 ? 'L' : 'R') + std::to_string(std::abs(offset));
+    // Two whole format strings rather than a letter concatenated onto a word: L and R are English
+    // initials, and a language that writes them differently -- or puts the distance before the
+    // side -- has nowhere to say so if the string is assembled here.
+    /* TRANSLATORS: %d is the distance left of centre, 1-63. L stands for left. */
+    g_autofree char* text = offset < 0 ? g_strdup_printf(_("Pan L%d"), -offset)
+                                       /* TRANSLATORS: %d is the distance right of centre, 1-63. */
+                                       : g_strdup_printf(_("Pan R%d"), offset);
+    return text;
 }
 
 } // namespace
@@ -249,7 +258,8 @@ static gboolean on_query_tooltip(GtkWidget* widget, int x, int y, gboolean keybo
         // multiplied, and a score that leaves volume alone and rides expression would otherwise look
         // as though nothing were moving.
         g_autofree char* text =
-            g_strdup_printf("Volume %d · Expression %d", ts_part_get_volume(self->part),
+            /* TRANSLATORS: the two CC values that together decide how loud a part is. */
+            g_strdup_printf(_("Volume %d · Expression %d"), ts_part_get_volume(self->part),
                             ts_part_get_expression(self->part));
         gtk_tooltip_set_text(tooltip, text);
         return TRUE;
@@ -531,12 +541,12 @@ static void ts_part_row_init(TsPartRow* self)
     // says. A host-side trim riding on top would survive both, and would then be describing a mix
     // that neither the module nor an export of it would ever produce.
     ts_part_row_build_fader(self, self->volume, box, 0, ts::sequence_builder::default_volume,
-                            "Volume", G_CALLBACK(on_volume_changed));
+                            _("Volume"), G_CALLBACK(on_volume_changed));
 
     // Pan starts at 1, not 0: the engine folds a CC#10 of zero up to one because the controller
     // cannot express the random-pan setting, and a fader whose bottom end silently became something
     // else would be lying about its own travel.
-    ts_part_row_build_fader(self, self->pan, box, 1, ts::sequence_builder::default_pan, "Pan",
+    ts_part_row_build_fader(self, self->pan, box, 1, ts::sequence_builder::default_pan, _("Pan"),
                             G_CALLBACK(on_pan_changed));
 
     // No fill from the left, because pan has no low end to fill from -- what a reader wants from it
@@ -551,18 +561,22 @@ static void ts_part_row_init(TsPartRow* self)
 
     // Muting happens at the mix, not at the note: the part goes on consuming polyphony, which is
     // what the module does and what makes a muted part still steal voices from the others.
-    self->mute = gtk_toggle_button_new_with_label("M");
+    /* TRANSLATORS: one letter, the mute button on a mixer strip. There is room for one glyph
+       only; pick whatever initial reads as "mute" in your language. */
+    self->mute = gtk_toggle_button_new_with_label(C_("mixer strip button", "M"));
     gtk_widget_add_css_class(self->mute, "flat");
     gtk_widget_set_valign(self->mute, GTK_ALIGN_CENTER);
     gtk_widget_set_tooltip_text(
-        self->mute, "Silence this part at the mix. It goes on using polyphony either way.");
+        self->mute, _("Silence this part at the mix. It goes on using polyphony either way."));
     g_signal_connect(self->mute, "toggled", G_CALLBACK(on_mute_toggled), self);
     gtk_box_append(GTK_BOX(box), self->mute);
 
-    self->solo = gtk_toggle_button_new_with_label("S");
+    /* TRANSLATORS: one letter, the solo button on a mixer strip. As with the mute button, there
+       is room for one glyph only. */
+    self->solo = gtk_toggle_button_new_with_label(C_("mixer strip button", "S"));
     gtk_widget_add_css_class(self->solo, "flat");
     gtk_widget_set_valign(self->solo, GTK_ALIGN_CENTER);
-    gtk_widget_set_tooltip_text(self->solo, "Hear only the soloed parts.");
+    gtk_widget_set_tooltip_text(self->solo, _("Hear only the soloed parts."));
     g_signal_connect(self->solo, "toggled", G_CALLBACK(on_solo_toggled), self);
     gtk_box_append(GTK_BOX(box), self->solo);
 

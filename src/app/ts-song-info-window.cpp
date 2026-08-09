@@ -4,6 +4,8 @@
 #include "app/ts-tone-map.hpp"
 #include "host/ts_session.hpp"
 
+#include <glib/gi18n.h>
+
 #include <cmath>
 #include <string>
 #include <vector>
@@ -222,9 +224,12 @@ std::string container_text(const SongInfo& info)
     // `to_smf` reports that it converted, not what it converted from, so a foreign container can
     // only be described as one. Saying so still matters: it explains why a `.xmi` has track names
     // and a format number at all.
-    std::string text =
-        info.container.empty() ? "Standard MIDI File" : "Converted to Standard MIDI File";
-    return text + ", format " + std::to_string(info.format);
+    /* TRANSLATORS: %d is the SMF format number, 0, 1 or 2. */
+    g_autofree char* text = info.container.empty()
+                                ? g_strdup_printf(_("Standard MIDI File, format %d"), info.format)
+                                : g_strdup_printf(
+                                      _("Converted to Standard MIDI File, format %d"), info.format);
+    return text;
 }
 
 /// The page is a pure function of the file's own metadata plus the module setting -- it reads no
@@ -234,19 +239,19 @@ void build_song_page(AdwPreferencesPage* page, const SongInfo& info, TsPlayerMod
 {
     // No "Name" row: the window's own subtitle already carries the file name, and repeating it as
     // the first row of the first group says the same thing twice on one screen.
-    auto* file_group = new_group(page, "File");
-    add_value(file_group, "Container", container_text(info));
-    add_value(file_group, "Tracks", std::to_string(info.track_count));
-    add_value(file_group, "Duration", frames_to_clock(info.length));
+    auto* file_group = new_group(page, _("File"));
+    add_value(file_group, _("Container"), container_text(info));
+    add_value(file_group, _("Tracks"), std::to_string(info.track_count));
+    add_value(file_group, _("Duration"), frames_to_clock(info.length));
 
     // -- What it asks to be played on --
     //
     // No group description. What "asks for" means is carried by the evidence under it, and a
     // paragraph explaining that Preferences is where the module is chosen belongs in Preferences.
-    auto* module_group = new_group(page, "Module");
+    auto* module_group = new_group(page, _("Module"));
 
     const std::string wanted = ts::host::vintage_name(info.vintage);
-    auto* asks = value_row("Asks For", wanted.empty() ? "No preference" : wanted.c_str());
+    auto* asks = value_row(_("Asks For"), wanted.empty() ? _("No preference") : wanted.c_str());
     if (!info.vintage_evidence.empty()) {
         // The evidence is the row's own subtitle rather than a second row: it is the reason for
         // the value beside it, not a separate fact.
@@ -256,31 +261,38 @@ void build_song_page(AdwPreferencesPage* page, const SongInfo& info, TsPlayerMod
     adw_preferences_group_add(module_group, GTK_WIDGET(asks));
 
     const int playing_on = g_settings_get_int(ts_settings_get(), "map");
-    add_value(module_group, "Playing On", ts_tone_map_display_name(playing_on));
+    add_value(module_group, _("Playing On"), ts_tone_map_display_name(playing_on));
 
     // -- Timing --
-    auto* timing_group = new_group(page, "Timing");
+    auto* timing_group = new_group(page, _("Timing"));
     std::string tempo;
     if (info.initial_tempo_bpm > 0.0) {
-        tempo = std::to_string(static_cast<int>(info.initial_tempo_bpm + 0.5)) + " bpm";
-        if (info.tempo_changes > 1) {
-            tempo += ", varying";
-        }
+        const int bpm = static_cast<int>(info.initial_tempo_bpm + 0.5);
+        // Two whole sentences rather than a suffix appended to the first: the qualifier lands in a
+        // different place in different languages, and appending fixes it at the end.
+        /* TRANSLATORS: %d is beats per minute. */
+        g_autofree char* text = info.tempo_changes > 1
+                                    ? g_strdup_printf(_("%d bpm, varying"), bpm)
+                                    : g_strdup_printf(_("%d bpm"), bpm);
+        tempo = text;
     }
-    add_value(timing_group, "Tempo", tempo);
-    add_value(timing_group, "Time", info.time_signature);
-    add_value(timing_group, "Key", info.key_signature);
+    add_value(timing_group, _("Tempo"), tempo);
+    add_value(timing_group, _("Time"), info.time_signature);
+    add_value(timing_group, _("Key"), info.key_signature);
 
     // -- The loop --
     //
     // Only when there is one. A group whose entire content is "there is no loop" is a row saying
     // nothing, and the great majority of files have none.
     if (info.has_loop) {
-        auto* loop_group = new_group(page, "Loop");
+        auto* loop_group = new_group(page, _("Loop"));
         // Named because the two behave differently at the jump: a soft loop rewinds cleanly, where
         // a hard one's end is inferred and replays controllers the way a seek does.
-        add_value(loop_group, info.loop_soft ? "Soft" : "Hard",
-                  frames_to_clock(info.loop_start) + " – " + frames_to_clock(info.loop_end));
+        /* TRANSLATORS: the two %s are clock positions like "1:23"; this is the span of the loop. */
+        g_autofree char* span =
+            g_strdup_printf(_("%s – %s"), frames_to_clock(info.loop_start).c_str(),
+                            frames_to_clock(info.loop_end).c_str());
+        add_value(loop_group, info.loop_soft ? _("Soft") : _("Hard"), span);
     }
 
     // -- What it says --
@@ -290,7 +302,7 @@ void build_song_page(AdwPreferencesPage* page, const SongInfo& info, TsPlayerMod
     const bool has_text =
         !info.copyright.empty() || !info.text.empty() || !info.karaoke_headings.empty();
     if (has_text) {
-        auto* text_group = new_group(page, "Text");
+        auto* text_group = new_group(page, _("Text"));
         if (!info.copyright.empty()) {
             g_autofree char* markup = to_markup(info.copyright, info.encoding);
             adw_preferences_group_add(text_group, GTK_WIDGET(text_row(markup)));
@@ -306,7 +318,7 @@ void build_song_page(AdwPreferencesPage* page, const SongInfo& info, TsPlayerMod
     }
 
     if (!info.markers.empty()) {
-        auto* marker_group = new_group(page, "Markers");
+        auto* marker_group = new_group(page, _("Markers"));
         for (const auto& marker : info.markers) {
             g_autofree char* markup = to_markup(marker.text, info.encoding);
             adw_preferences_group_add(
@@ -325,8 +337,9 @@ void build_tracks_page(AdwPreferencesPage* page, const SongInfo& info)
         auto* row = ADW_ACTION_ROW(adw_action_row_new());
 
         g_autofree char* name = to_markup(track.name, info.encoding);
+        /* TRANSLATORS: %d is the track number and %s its name, e.g. "3. Bass". */
         g_autofree char* heading =
-            g_strdup_printf("%d. %s", track.number, *name != '\0' ? name : "Untitled");
+            g_strdup_printf(_("%d. %s"), track.number, *name != '\0' ? name : _("Untitled"));
         adw_preferences_row_set_title(ADW_PREFERENCES_ROW(row), heading);
 
         // The instrument name and the channels are two different answers to "what is this track",
@@ -341,14 +354,25 @@ void build_tracks_page(AdwPreferencesPage* page, const SongInfo& info)
             if (!subtitle.empty()) {
                 subtitle += " · ";
             }
-            subtitle += (track.channels.size() == 1 ? "Channel " : "Channels ") + channels;
+            // The plural is over how many channels the list names, not over any one number in
+            // it, so the joined list is substituted into a form chosen by its length.
+            /* TRANSLATORS: %s is a comma-separated list of channel numbers. */
+            g_autofree char* text = g_strdup_printf(
+                g_dngettext(nullptr, "Channel %s", "Channels %s",
+                            static_cast<gulong>(track.channels.size())),
+                channels.c_str());
+            subtitle += text;
         }
         if (!subtitle.empty()) {
             adw_action_row_set_subtitle(row, subtitle.c_str());
         }
 
-        GtkWidget* count = gtk_label_new(
-            track.notes == 1 ? "1 note" : (std::to_string(track.notes) + " notes").c_str());
+        /* TRANSLATORS: %d is how many notes the track contains. */
+        g_autofree char* notes =
+            g_strdup_printf(g_dngettext(nullptr, "%d note", "%d notes",
+                                        static_cast<gulong>(track.notes)),
+                            track.notes);
+        GtkWidget* count = gtk_label_new(notes);
         gtk_widget_add_css_class(count, "dim-label");
         gtk_widget_add_css_class(count, "numeric");
         gtk_widget_set_valign(count, GTK_ALIGN_CENTER);
@@ -365,7 +389,7 @@ GtkWidget* build_lyrics_page(const SongInfo& info)
     if (*text == '\0') {
         auto* empty = ADW_STATUS_PAGE(adw_status_page_new());
         adw_status_page_set_icon_name(empty, "format-justify-left-symbolic");
-        adw_status_page_set_title(empty, "No Lyrics");
+        adw_status_page_set_title(empty, _("No Lyrics"));
         return GTK_WIDGET(empty);
     }
 
@@ -395,7 +419,7 @@ GtkWidget* build_nothing_loaded()
 {
     auto* empty = ADW_STATUS_PAGE(adw_status_page_new());
     adw_status_page_set_icon_name(empty, "audio-x-generic-symbolic");
-    adw_status_page_set_title(empty, "No Song Loaded");
+    adw_status_page_set_title(empty, _("No Song Loaded"));
     return GTK_WIDGET(empty);
 }
 
@@ -421,9 +445,9 @@ void rebuild(TsSongInfoWindow* self)
     g_object_get(self->model, "song-name", &song_name, nullptr);
 
     if (song_name == nullptr) {
-        adw_view_stack_add_titled_with_icon(self->pages, build_nothing_loaded(), "empty", "Song",
-                                            "audio-x-generic-symbolic");
-        adw_window_title_set_title(self->title, "Song Information");
+        adw_view_stack_add_titled_with_icon(self->pages, build_nothing_loaded(), "empty",
+                                            _("Song"), "audio-x-generic-symbolic");
+        adw_window_title_set_title(self->title, _("Song Information"));
         adw_window_title_set_subtitle(self->title, nullptr);
         return;
     }
@@ -432,18 +456,18 @@ void rebuild(TsSongInfoWindow* self)
 
     auto* song = new_scrolling_page();
     build_song_page(song, info, self->model);
-    adw_view_stack_add_titled_with_icon(self->pages, GTK_WIDGET(song), "song", "Song",
+    adw_view_stack_add_titled_with_icon(self->pages, GTK_WIDGET(song), "song", _("Song"),
                                         "help-about-symbolic");
 
     auto* tracks = new_scrolling_page();
     build_tracks_page(tracks, info);
-    adw_view_stack_add_titled_with_icon(self->pages, GTK_WIDGET(tracks), "tracks", "Tracks",
+    adw_view_stack_add_titled_with_icon(self->pages, GTK_WIDGET(tracks), "tracks", _("Tracks"),
                                         "view-list-symbolic");
 
-    adw_view_stack_add_titled_with_icon(self->pages, build_lyrics_page(info), "lyrics", "Lyrics",
-                                        "format-justify-left-symbolic");
+    adw_view_stack_add_titled_with_icon(self->pages, build_lyrics_page(info), "lyrics",
+                                        _("Lyrics"), "format-justify-left-symbolic");
 
-    adw_window_title_set_title(self->title, "Song Information");
+    adw_window_title_set_title(self->title, _("Song Information"));
     adw_window_title_set_subtitle(self->title, song_name);
 }
 
@@ -462,7 +486,7 @@ GtkWindow* ts_song_info_window_new(TsPlayerModel* model, GtkWindow* parent)
     auto* self = TS_SONG_INFO_WINDOW(g_object_new(TS_TYPE_SONG_INFO_WINDOW, nullptr));
     self->model = model;
 
-    gtk_window_set_title(GTK_WINDOW(self), "Song Information");
+    gtk_window_set_title(GTK_WINDOW(self), _("Song Information"));
     // Tall rather than wide: every page here is a single column, and the file group, the module and
     // the timing together already fill more than a 640-high window before any of the file's own
     // text is reached.
@@ -473,7 +497,7 @@ GtkWindow* ts_song_info_window_new(TsPlayerModel* model, GtkWindow* parent)
     gtk_window_set_transient_for(GTK_WINDOW(self), parent);
     gtk_window_set_destroy_with_parent(GTK_WINDOW(self), TRUE);
 
-    self->title = ADW_WINDOW_TITLE(adw_window_title_new("Song Information", nullptr));
+    self->title = ADW_WINDOW_TITLE(adw_window_title_new(_("Song Information"), nullptr));
     self->pages = ADW_VIEW_STACK(adw_view_stack_new());
 
     auto* header = ADW_HEADER_BAR(adw_header_bar_new());

@@ -1,0 +1,7 @@
+# Languages with a catalogue, one per line, as msgfmt --desktop and --xml expect to find them.
+#
+# ja rather than ja_JP: gettext expands a request for ja_JP to ja, but never the other way, so the
+# bare language code reaches strictly more readers for the same file. es_CL is a real regional
+# choice rather than a redundant one, and stays.
+es_CL
+ja

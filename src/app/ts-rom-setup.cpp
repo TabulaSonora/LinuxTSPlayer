@@ -2,6 +2,8 @@
 
 #include "tabulasonora/table_manifest.hpp"
 
+#include <glib/gi18n.h>
+
 struct _TsRomSetup {
     GtkWidget parent_instance;
 
@@ -60,11 +62,13 @@ static void ts_rom_setup_init(TsRomSetup* self)
 
     auto* page = ADW_STATUS_PAGE(adw_status_page_new());
     adw_status_page_set_icon_name(page, "co.losno.TabulaSonoraPlayer-symbolic");
-    adw_status_page_set_title(page, "Choose Your Sound Canvas ROM");
+    adw_status_page_set_title(page, _("Choose Your Sound Canvas ROM"));
 
+    /* TRANSLATORS: the two %s are the product name and version of the Roland software the DLL
+       comes from, e.g. "SOUND Canvas VA" and "1.1.6". */
     g_autofree char* description = g_strdup_printf(
-        "Tabula Sonora plays through the Roland Sound Canvas voice, which lives inside "
-        "SCCore.dll. Point it at your own copy from %s %s.",
+        _("Tabula Sonora plays through the Roland Sound Canvas voice, which lives inside "
+          "SCCore.dll. Point it at your own copy from %s %s."),
         pinned.product.c_str(), pinned.version.c_str());
     adw_status_page_set_description(page, description);
 
@@ -76,7 +80,7 @@ static void ts_rom_setup_init(TsRomSetup* self)
     self->stack = gtk_stack_new();
     gtk_widget_set_halign(self->stack, GTK_ALIGN_CENTER);
 
-    GtkWidget* choose = gtk_button_new_with_label("Choose SCCore.dll…");
+    GtkWidget* choose = gtk_button_new_with_label(_("Choose SCCore.dll…"));
     gtk_widget_add_css_class(choose, "suggested-action");
     gtk_widget_add_css_class(choose, "pill");
     gtk_actionable_set_action_name(GTK_ACTIONABLE(choose), "win.import-rom");
@@ -85,22 +89,24 @@ static void ts_rom_setup_init(TsRomSetup* self)
     GtkWidget* checking = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 12);
     gtk_widget_set_halign(checking, GTK_ALIGN_CENTER);
     gtk_box_append(GTK_BOX(checking), adw_spinner_new());
-    gtk_box_append(GTK_BOX(checking), gtk_label_new("Checking the file…"));
+    gtk_box_append(GTK_BOX(checking), gtk_label_new(_("Checking the file…")));
     gtk_stack_add_named(GTK_STACK(self->stack), checking, "checking");
 
     gtk_box_append(GTK_BOX(body), self->stack);
 
     auto* group = ADW_PREFERENCES_GROUP(adw_preferences_group_new());
-    adw_preferences_group_set_title(group, "The File It Needs");
+    adw_preferences_group_set_title(group, _("The File It Needs"));
 
     // A natural width rather than a floor of its own: the SHA-256 row already ellipsizes, and a
     // hard minimum here would set the whole window's minimum width.
     gtk_widget_set_hexpand(GTK_WIDGET(group), TRUE);
 
     g_autofree char* size = g_format_size(static_cast<guint64>(pinned.size));
-    adw_preferences_group_add(group, GTK_WIDGET(identity_row("File", pinned.file_name.c_str(), false)));
-    adw_preferences_group_add(group, GTK_WIDGET(identity_row("Size", size, false)));
-    adw_preferences_group_add(group, GTK_WIDGET(identity_row("SHA-256", pinned.sha256.c_str(), true)));
+    adw_preferences_group_add(group,
+                              GTK_WIDGET(identity_row(_("File"), pinned.file_name.c_str(), false)));
+    adw_preferences_group_add(group, GTK_WIDGET(identity_row(_("Size"), size, false)));
+    adw_preferences_group_add(group,
+                              GTK_WIDGET(identity_row(_("SHA-256"), pinned.sha256.c_str(), true)));
 
     gtk_box_append(GTK_BOX(body), GTK_WIDGET(group));
 

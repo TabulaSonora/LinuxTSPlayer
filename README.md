@@ -107,6 +107,39 @@ seconds rather than minutes.
 - **Do not run a Debug build unoptimised.** The synth renders only ~1.4× realtime that way, which no
   ring can absorb. `TSGUI_FAST_DEBUG` (on by default) compiles the engine at `-O2` even in Debug.
 
+## Translating
+
+The interface, the desktop entry, the AppStream metainfo, the GSettings descriptions and the MIME
+comments all come from one catalogue per language under `po/`. Spanish (Chile) and Japanese ship
+today.
+
+```sh
+cmake --build --preset dev --target update-po   # rescan the sources, merge into every catalogue
+```
+
+That runs `update-pot` first, so it both refreshes `po/tabula-sonora-player.pot` and merges it into
+each `.po`. Neither target runs as part of a normal build: regenerating the template rewrites its
+timestamp, and a no-op build should not leave the tree dirty.
+
+To add a language, put its code in `po/LINGUAS` and create the catalogue from the template:
+
+```sh
+msginit --locale=pt_BR --input=po/tabula-sonora-player.pot --output=po/pt_BR.po
+```
+
+An uninstalled build has no catalogue under the install prefix, so point the app at the one in the
+build tree:
+
+```sh
+TS_LOCALE_DIR=build/dev/po/locale LANGUAGE=es_CL GSETTINGS_SCHEMA_DIR=build/dev/data \
+    ./build/dev/src/tabula-sonora-player
+```
+
+Tone and drum-kit names are not translated anywhere. They come out of `SCCore.dll` at runtime and
+are the module's own display text, the same strings its LCD shows; translating them would break the
+correspondence with every patch chart. The module designations and the SysEx message names in the
+song information are left alone for the same reason.
+
 ## Testing
 
 ```sh

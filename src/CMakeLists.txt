@@ -25,6 +25,12 @@ add_library(tsgui_host STATIC
 
 target_include_directories(tsgui_host PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 
+# The host layer translates its own user-visible prose, which the application shows in dialogs and
+# in the song information. PUBLIC because host/ts_i18n.hpp expands the macro in a header, so every
+# consumer -- the executable and the test binaries -- has to agree on it. Nothing is linked for
+# this: on glibc dgettext is in libc, and this application targets nothing else.
+target_compile_definitions(tsgui_host PUBLIC GETTEXT_PACKAGE="${TSGUI_GETTEXT_PACKAGE}")
+
 target_link_libraries(tsgui_host
     PUBLIC
         ts::tabulasonora
@@ -68,7 +74,10 @@ target_compile_definitions(${TSGUI_BINARY_NAME} PRIVATE
     TSGUI_VERSION="${PROJECT_VERSION}"
     # Always defined, empty when the engine's commit could not be read, so the dialog tests a string
     # rather than the build testing a macro. See the block that sets it in the top-level CMakeLists.
-    TSGUI_NATIVETS_COMMIT="${TSGUI_NATIVETS_COMMIT}")
+    TSGUI_NATIVETS_COMMIT="${TSGUI_NATIVETS_COMMIT}"
+    # Where the installed catalogues are. An uninstalled run overrides it with TS_LOCALE_DIR, the
+    # same way it already has to override the schema directory with GSETTINGS_SCHEMA_DIR.
+    TSGUI_LOCALE_DIR="${CMAKE_INSTALL_FULL_LOCALEDIR}")
 
 target_link_libraries(${TSGUI_BINARY_NAME}
     PRIVATE

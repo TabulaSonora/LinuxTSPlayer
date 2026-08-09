@@ -1,0 +1,915 @@
+# Japanese translation for Tabula Sonora Player.
+# Copyright (C) 2026 the Tabula Sonora Player authors.
+# This file is distributed under the same license as the Tabula Sonora Player package.
+#
+# Terminology follows Roland's own Japanese Sound Canvas manuals rather than a general computing
+# glossary: 同時発音数 for polyphony, パート for part, 音源 for the tone generator, 音切れ for a
+# dropout. Menu mnemonics follow the GNOME Japanese convention of appending the Latin accelerator
+# in parentheses -- 開く(_O) -- rather than marking a character inside the translated text.
+#
+# Roland's own display text is deliberately left alone: tone and drum kit names, the module
+# designations, and the SysEx message names in the song information.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Tabula Sonora Player 0.1.0\n"
+"Report-Msgid-Bugs-To: https://github.com/TabulaSonora/TSGui/issues\n"
+"POT-Creation-Date: 2026-08-09 16:00-0400\n"
+"PO-Revision-Date: 2026-08-09 15:46-0400\n"
+"Last-Translator: \n"
+"Language-Team: Japanese\n"
+"Language: ja\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+#: data/co.losno.TabulaSonoraPlayer.desktop.in:3
+#: data/co.losno.TabulaSonoraPlayer.metainfo.xml.in:7 data/ui/window.ui:44
+#: data/ui/window.ui:118 src/app/main.cpp:31 src/app/ts-application.cpp:74
+#: src/app/ts-window.cpp:90
+msgid "Tabula Sonora"
+msgstr "Tabula Sonora"
+
+#: data/co.losno.TabulaSonoraPlayer.desktop.in:4
+msgid "MIDI Player"
+msgstr "MIDI プレイヤー"
+
+#: data/co.losno.TabulaSonoraPlayer.desktop.in:5
+#: data/co.losno.TabulaSonoraPlayer.metainfo.xml.in:8
+msgid "Play MIDI files through the Roland Sound Canvas voice"
+msgstr "ローランド Sound Canvas の音源で MIDI ファイルを再生します"
+
+#: data/co.losno.TabulaSonoraPlayer.desktop.in:7
+msgid "MIDI;SMF;Sound Canvas;SC-88;SC-8820;GS;XG;synthesizer;"
+msgstr ""
+"MIDI;SMF;Sound Canvas;SC-88;SC-8820;GS;XG;シンセサイザー;音源;シンセ;音楽;"
+
+#: data/co.losno.TabulaSonoraPlayer.metainfo.xml.in:11
+msgid ""
+"Tabula Sonora plays Standard MIDI Files through a native reimplementation of "
+"the Roland Sound Canvas VA synthesizer voice — the SC-55, SC-88, SC-88Pro, "
+"SC-8820 and XG tone maps, the GS send effects, and the insertion effects."
+msgstr ""
+"Tabula Sonora は、ローランド Sound Canvas VA のシンセサイザー音源をネイティブ"
+"に再実装したエンジンでスタンダード MIDI ファイルを再生します。SC-55、SC-88、"
+"SC-88Pro、SC-8820、XG の各音色マップ、GS のセンド・エフェクト、インサーショ"
+"ン・エフェクトに対応しています。"
+
+#: data/co.losno.TabulaSonoraPlayer.metainfo.xml.in:16
+msgid ""
+"It reads far more than SMF: RIFF-MIDI, DirectMusic MIDS, DOOM MUS, Miles "
+"XMI, GMF, both HMI containers, Mobile XMF and LDS tracker files are all "
+"converted on the way in, and the file's own loop points are honoured where "
+"it declares any."
+msgstr ""
+"SMF 以外にも幅広く対応します。RIFF-MIDI、DirectMusic MIDS、DOOM MUS、Miles "
+"XMI、GMF、2 種類の HMI コンテナ、Mobile XMF、LDS トラッカー・ファイルはいずれ"
+"も読み込み時に変換され、ファイル自身がループ・ポイントを持つ場合はそれに従い"
+"ます。"
+
+#: data/co.losno.TabulaSonoraPlayer.metainfo.xml.in:21
+msgid ""
+"A mixer strip appears for each part the file addresses, showing the sounding "
+"instrument, a live voice count, and mute and solo. Songs can be exported to "
+"WAV while playback continues, and a MIDI keyboard can be played over a "
+"running song."
+msgstr ""
+"ファイルが使用しているパートごとにミキサー・ストリップが表示され、鳴っている"
+"音色、リアルタイムの発音数、ミュートとソロを確認できます。再生を続けたまま "
+"WAV に書き出すことができ、再生中の曲に重ねて MIDI キーボードを演奏することも"
+"できます。"
+
+#: data/co.losno.TabulaSonoraPlayer.metainfo.xml.in:26
+msgid ""
+"The synthesizer needs a copy of SCCore.dll from a licensed Roland SOUND "
+"Canvas VA installation, which is not included. It is read as data and never "
+"loaded as code; the application asks for it on first launch."
+msgstr ""
+"この音源には、正規のローランド SOUND Canvas VA からコピーした SCCore.dll が必"
+"要です（本体には含まれていません）。ファイルはデータとして読み込まれるだけ"
+"で、コードとして実行されることはありません。初回起動時に場所を尋ねます。"
+
+#: data/co.losno.TabulaSonoraPlayer.metainfo.xml.in:61
+msgid "First release."
+msgstr "最初のリリース。"
+
+#: data/co.losno.TabulaSonoraPlayer.mime.xml:21
+msgid "RIFF MIDI audio"
+msgstr "RIFF MIDI オーディオ"
+
+#: data/co.losno.TabulaSonoraPlayer.mime.xml:35
+msgid "DirectMusic sequence"
+msgstr "DirectMusic シーケンス"
+
+#: data/co.losno.TabulaSonoraPlayer.mime.xml:46
+msgid "DOOM music"
+msgstr "DOOM ミュージック"
+
+#: data/co.losno.TabulaSonoraPlayer.mime.xml:54
+msgid "Miles extended MIDI"
+msgstr "Miles 拡張 MIDI"
+
+#: data/co.losno.TabulaSonoraPlayer.mime.xml:75
+msgid "GMF music"
+msgstr "GMF ミュージック"
+
+#: data/co.losno.TabulaSonoraPlayer.mime.xml:83
+msgid "Human Machine Interfaces music"
+msgstr "Human Machine Interfaces ミュージック"
+
+#: data/co.losno.TabulaSonoraPlayer.mime.xml:91
+msgid "Human Machine Interfaces MIDI P"
+msgstr "Human Machine Interfaces MIDI P"
+
+#: data/co.losno.TabulaSonoraPlayer.mime.xml:99
+msgid "Loudness Sound System music"
+msgstr "Loudness Sound System ミュージック"
+
+#: data/co.losno.TabulaSonoraPlayer.gschema.xml:25
+msgid "Tone map"
+msgstr "音色マップ"
+
+#: data/co.losno.TabulaSonoraPlayer.gschema.xml:26
+msgid ""
+"Which module's tone map program changes resolve against, as ts::ToneMap: 1 "
+"SC-55, 2 SC-88, 3 SC-88Pro, 4 SC-8820, 119 XG."
+msgstr ""
+"プログラム・チェンジをどのモジュールの音色マップで解決するか。ts::ToneMap の"
+"値: 1 SC-55、2 SC-88、3 SC-88Pro、4 SC-8820、119 XG。"
+
+#: data/co.losno.TabulaSonoraPlayer.gschema.xml:35
+msgid "Voices before stealing"
+msgstr "ボイス・スティールまでの発音数"
+
+#: data/co.losno.TabulaSonoraPlayer.gschema.xml:36
+msgid "The hardware's own limit is 64."
+msgstr "実機の上限は 64 です。"
+
+#: data/co.losno.TabulaSonoraPlayer.gschema.xml:42
+msgid "MIDI ports"
+msgstr "MIDI ポート"
+
+#: data/co.losno.TabulaSonoraPlayer.gschema.xml:43
+msgid "1, 2 or 4, giving 16, 32 or 64 parts. The module has two."
+msgstr ""
+"1、2 または 4 で、それぞれ 16、32、64 パートになります。実機は 2 ポートです。"
+
+#: data/co.losno.TabulaSonoraPlayer.gschema.xml:48
+msgid "Extended interpolation"
+msgstr "拡張補間"
+
+#: data/co.losno.TabulaSonoraPlayer.gschema.xml:49
+msgid ""
+"The wide band-limiting resampler, and with it the removal of the module's "
+"pitch increment ceiling. On is the engine's own default and the one place it "
+"knowingly departs from SCCore.dll; off reproduces the module exactly, "
+"aliasing and stalled glides included."
+msgstr ""
+"帯域制限の広いリサンプラーを使い、実機のピッチ変化量の上限を取り払います。オ"
+"ンがエンジン本来の既定値で、SCCore.dll から意図的に外れる唯一の箇所です。オフ"
+"にすると、エイリアシングや止まってしまうグライドも含めて実機どおりに再現しま"
+"す。"
+
+#: data/co.losno.TabulaSonoraPlayer.gschema.xml:56
+msgid "Reverb send"
+msgstr "リバーブ・センド"
+
+#: data/co.losno.TabulaSonoraPlayer.gschema.xml:57
+msgid "Chorus send"
+msgstr "コーラス・センド"
+
+#: data/co.losno.TabulaSonoraPlayer.gschema.xml:58
+msgid "System delay"
+msgstr "システム・ディレイ"
+
+#: data/co.losno.TabulaSonoraPlayer.gschema.xml:59
+msgid "Insertion effects"
+msgstr "インサーション・エフェクト"
+
+#: data/co.losno.TabulaSonoraPlayer.gschema.xml:64
+msgid "Linear gain on the finished mix"
+msgstr "最終ミックスに対するリニア・ゲイン"
+
+#: data/co.losno.TabulaSonoraPlayer.gschema.xml:70
+msgid "How far ahead of the device to render"
+msgstr "デバイスに対してどれだけ先までレンダリングするか"
+
+#: data/co.losno.TabulaSonoraPlayer.gschema.xml:71
+msgid ""
+"Lower answers a keyboard sooner; raise it if you hear dropouts. Changing it "
+"never reallocates the ring, so it is safe to drag while playing."
+msgstr ""
+"小さくするとキーボードへの反応が速くなります。音切れが聞こえる場合は大きくし"
+"てください。変更してもリング・バッファは確保し直されないため、再生中に動かし"
+"ても安全です。"
+
+#: data/co.losno.TabulaSonoraPlayer.gschema.xml:79
+msgid "Repeat at the file's own loop points"
+msgstr "ファイル自身のループ・ポイントで繰り返す"
+
+#: data/co.losno.TabulaSonoraPlayer.gschema.xml:84
+msgid "Subscribe to every readable ALSA sequencer port"
+msgstr "読み取り可能なすべての ALSA シーケンサー・ポートに接続する"
+
+#: data/co.losno.TabulaSonoraPlayer.gschema.xml:85
+msgid ""
+"Convenient with one keyboard attached, and wrong on a machine running a "
+"sequencer, where it would echo everything back into the synth."
+msgstr ""
+"キーボードを 1 台つないでいるときは便利ですが、シーケンサーを動かしているマシ"
+"ンではすべてが音源へ返ってしまうため適しません。"
+
+#: data/co.losno.TabulaSonoraPlayer.gschema.xml:93
+msgid "Whether the stored ROM has passed a full hash"
+msgstr "保存された ROM が完全なハッシュ検証を通過したかどうか"
+
+#: data/co.losno.TabulaSonoraPlayer.gschema.xml:94
+msgid ""
+"Once true, later launches check only size and PE timestamp, which is all a "
+"file already verified once needs."
+msgstr ""
+"真になった後の起動では、サイズと PE タイムスタンプだけを確認します。一度検証"
+"済みのファイルにはそれで十分です。"
+
+#: data/ui/window.ui:9
+msgid "_Open…"
+msgstr "開く(_O)…"
+
+#: data/ui/window.ui:13
+msgid "Open _Recent"
+msgstr "最近使用したファイル(_R)"
+
+#: data/ui/window.ui:20
+msgid "_Export WAV…"
+msgstr "WAV を書き出す(_E)…"
+
+#. The ROM is the SCCore.dll the engine reads its tables from.
+#: data/ui/window.ui:27
+msgid "Import Sound Canvas _ROM…"
+msgstr "Sound Canvas の ROM を読み込む(_R)…"
+
+#: data/ui/window.ui:31
+msgid "_Preferences"
+msgstr "設定(_P)"
+
+#: data/ui/window.ui:37
+msgid "_About Tabula Sonora"
+msgstr "Tabula Sonora について(_A)"
+
+#. Tooltip on the hamburger button.
+#: data/ui/window.ui:94 data/ui/window.ui:134
+msgid "Main Menu"
+msgstr "メインメニュー"
+
+#. Tooltip on the button that opens the file chooser.
+#: data/ui/window.ui:125
+msgid "Open a MIDI file"
+msgstr "MIDI ファイルを開く"
+
+#. Opens the window describing the loaded file.
+#: data/ui/window.ui:153
+msgid "Song information"
+msgstr "曲情報"
+
+#. View switcher page holding the transport, on short windows.
+#: data/ui/window.ui:206
+msgid "Playing"
+msgstr "再生"
+
+#. View switcher page holding the mixer strips.
+#: data/ui/window.ui:219
+msgid "Mixer"
+msgstr "ミキサー"
+
+#: src/app/ts-application.cpp:80
+msgid ""
+"Plays MIDI files through a native reimplementation of the Roland Sound "
+"Canvas VA voice."
+msgstr ""
+"ローランド Sound Canvas VA の音源をネイティブに再実装したエンジンで MIDI ファ"
+"イルを再生します。"
+
+#: src/app/ts-application.cpp:86
+msgid "translator-credits"
+msgstr ""
+
+#: src/app/ts-application.cpp:100
+msgid "Sound Canvas Voice"
+msgstr "Sound Canvas 音源"
+
+#: src/app/ts-application.cpp:101
+msgid ""
+"Reimplemented from a licensed copy of SCCore.dll, which is read as data and "
+"never loaded as code. Reverb and chorus coefficients are Roland-derived; see "
+"the NOTICE file distributed with this program."
+msgstr ""
+"正規の SCCore.dll をもとに再実装したものです。SCCore.dll はデータとして読み込"
+"まれるだけで、コードとして実行されることはありません。リバーブとコーラスの係"
+"数はローランド由来です。本プログラムに同梱の NOTICE ファイルを参照してくださ"
+"い。"
+
+#. TRANSLATORS: %.7s is the engine's abbreviated git commit hash.
+#: src/app/ts-application.cpp:116
+#, c-format
+msgid "Sound Canvas Voice Engine (%.7s)"
+msgstr "Sound Canvas 音源エンジン (%.7s)"
+
+#: src/app/ts-application.cpp:127
+msgid "Sound Canvas Voice Engine"
+msgstr "Sound Canvas 音源エンジン"
+
+#: src/app/ts-mixer.cpp:141
+msgid "No Parts"
+msgstr "パートがありません"
+
+#: src/app/ts-mixer.cpp:142
+msgid "Open a MIDI file to see the parts it addresses."
+msgstr "MIDI ファイルを開くと、使用しているパートが表示されます。"
+
+#. TRANSLATORS: the spelled-out form of a mixer address like "A1", read by screen readers.
+#. %c is the port letter A-D and %d the 1-based channel.
+#: src/app/ts-part-object.cpp:156
+#, c-format
+msgid "Port %c, channel %d"
+msgstr "ポート %c、チャンネル %d"
+
+#. TRANSLATORS: %d is a GS drum kit number, as the module's own display shows it.
+#. TRANSLATORS: %d is a GS drum kit number, used when the module gives the
+#. kit no name of its own.
+#: src/app/ts-part-object.cpp:230 src/host/ts_session.cpp:381
+#, c-format
+msgid "Kit %d"
+msgstr "キット %d"
+
+#: src/app/ts-part-object.cpp:233
+msgid "Drums"
+msgstr "ドラム"
+
+#. TRANSLATORS: %d is a GS drum kit number.
+#: src/app/ts-part-object.cpp:266
+#, c-format
+msgid "Drum kit %d"
+msgstr "ドラムキット %d"
+
+#. TRANSLATORS: the first %d is the program counted from one, as every patch chart counts
+#. it; the second is the raw zero-based byte on the wire, for comparing with a MIDI capture.
+#: src/app/ts-part-object.cpp:272
+#, c-format
+msgid "Program %d (PC %d)"
+msgstr "プログラム %d (PC %d)"
+
+#. TRANSLATORS: the two halves of a MIDI bank select. Neither identifies a bank alone: on this
+#. module the MSB carries the variation and the LSB names the vintage.
+#: src/app/ts-part-object.cpp:278
+#, c-format
+msgid "Bank MSB %d, LSB %d"
+msgstr "バンク MSB %d、LSB %d"
+
+#. TRANSLATORS: %d is the bank the module actually looks the tone up in, which under XG is
+#. not the bank the part was sent.
+#: src/app/ts-part-object.cpp:286
+#, c-format
+msgid "(resolves against bank %d)"
+msgstr "(バンク %d で解決)"
+
+#: src/app/ts-part-row.cpp:87
+msgid "Pan random, set by SysEx"
+msgstr "パン ランダム (SysEx による設定)"
+
+#: src/app/ts-part-row.cpp:92
+msgid "Pan centre"
+msgstr "パン センター"
+
+#. TRANSLATORS: %d is the distance left of centre, 1-63. L stands for left.
+#: src/app/ts-part-row.cpp:99
+#, c-format
+msgid "Pan L%d"
+msgstr "パン L%d"
+
+#. TRANSLATORS: %d is the distance right of centre, 1-63.
+#: src/app/ts-part-row.cpp:101
+#, c-format
+msgid "Pan R%d"
+msgstr "パン R%d"
+
+#. TRANSLATORS: the two CC values that together decide how loud a part is.
+#: src/app/ts-part-row.cpp:262
+#, c-format
+msgid "Volume %d · Expression %d"
+msgstr "ボリューム %d · エクスプレッション %d"
+
+#: src/app/ts-part-row.cpp:544
+msgid "Volume"
+msgstr "ボリューム"
+
+#: src/app/ts-part-row.cpp:549
+msgid "Pan"
+msgstr "パン"
+
+#. TRANSLATORS: one letter, the mute button on a mixer strip. There is room for one glyph
+#. only; pick whatever initial reads as "mute" in your language.
+#: src/app/ts-part-row.cpp:566
+msgctxt "mixer strip button"
+msgid "M"
+msgstr "M"
+
+#: src/app/ts-part-row.cpp:570
+msgid "Silence this part at the mix. It goes on using polyphony either way."
+msgstr ""
+"このパートをミックス上で消音します。どちらの場合も同時発音数は消費し続けま"
+"す。"
+
+#. TRANSLATORS: one letter, the solo button on a mixer strip. As with the mute button, there
+#. is room for one glyph only.
+#: src/app/ts-part-row.cpp:576
+msgctxt "mixer strip button"
+msgid "S"
+msgstr "S"
+
+#: src/app/ts-part-row.cpp:579
+msgid "Hear only the soloed parts."
+msgstr "ソロにしたパートだけを再生します。"
+
+#: src/app/ts-prefs-dialog.cpp:136
+#, c-format
+msgid "%ld dropout so far"
+msgid_plural "%ld dropouts so far"
+msgstr[0] "これまでに %ld 回の音切れ"
+
+#: src/app/ts-prefs-dialog.cpp:143 src/app/ts-prefs-dialog.cpp:228
+msgid "No dropouts"
+msgstr "音切れなし"
+
+#: src/app/ts-prefs-dialog.cpp:166
+msgid "Preferences"
+msgstr "設定"
+
+#: src/app/ts-prefs-dialog.cpp:169
+msgid "Engine"
+msgstr "エンジン"
+
+#: src/app/ts-prefs-dialog.cpp:174
+msgid "Voice"
+msgstr "音源"
+
+#: src/app/ts-prefs-dialog.cpp:183 src/app/ts-song-info-window.cpp:251
+msgid "Module"
+msgstr "モジュール"
+
+#: src/app/ts-prefs-dialog.cpp:184
+msgid "Which module's tone map program changes resolve against"
+msgstr "プログラム・チェンジをどのモジュールの音色マップで解決するか"
+
+#: src/app/ts-prefs-dialog.cpp:189
+msgid "Parts"
+msgstr "パート"
+
+#: src/app/ts-prefs-dialog.cpp:190
+msgid "16 (1 port)"
+msgstr "16 (1 ポート)"
+
+#: src/app/ts-prefs-dialog.cpp:190
+msgid "32 (2 ports)"
+msgstr "32 (2 ポート)"
+
+#: src/app/ts-prefs-dialog.cpp:190
+msgid "64 (4 ports)"
+msgstr "64 (4 ポート)"
+
+#: src/app/ts-prefs-dialog.cpp:192
+msgid "Polyphony"
+msgstr "同時発音数"
+
+#: src/app/ts-prefs-dialog.cpp:193
+msgid "64 (hardware)"
+msgstr "64 (実機)"
+
+#: src/app/ts-prefs-dialog.cpp:198
+msgid "Extended Interpolation"
+msgstr "拡張補間"
+
+#: src/app/ts-prefs-dialog.cpp:199
+msgid ""
+"A wide band-limiting resampler with no pitch ceiling. Turn it off to "
+"reproduce SCCore.dll exactly, including its aliasing and the glides it "
+"stalls."
+msgstr ""
+"ピッチの上限がない、帯域制限の広いリサンプラーです。オフにすると、エイリアシ"
+"ングや止まってしまうグライドも含めて SCCore.dll をそのまま再現します。"
+
+#: src/app/ts-prefs-dialog.cpp:206
+msgid "Effects"
+msgstr "エフェクト"
+
+#: src/app/ts-prefs-dialog.cpp:207
+msgid "Reverb"
+msgstr "リバーブ"
+
+#: src/app/ts-prefs-dialog.cpp:208
+msgid "Chorus"
+msgstr "コーラス"
+
+#: src/app/ts-prefs-dialog.cpp:209
+msgid "Delay"
+msgstr "ディレイ"
+
+#: src/app/ts-prefs-dialog.cpp:210
+msgid "Insertion Effects"
+msgstr "インサーション・エフェクト"
+
+#: src/app/ts-prefs-dialog.cpp:219
+msgid "Latency"
+msgstr "レイテンシー"
+
+#: src/app/ts-prefs-dialog.cpp:221
+msgid ""
+"How far ahead the engine renders. Lower answers a keyboard sooner; raise it "
+"if you hear dropouts."
+msgstr ""
+"エンジンがどれだけ先までレンダリングするか。小さくするとキーボードへの反応が"
+"速くなり、音切れが聞こえる場合は大きくします。"
+
+#: src/app/ts-prefs-dialog.cpp:225
+msgid "Buffer"
+msgstr "バッファ"
+
+#: src/app/ts-prefs-dialog.cpp:239
+msgid "MIDI Input"
+msgstr "MIDI 入力"
+
+#: src/app/ts-prefs-dialog.cpp:240
+msgid "Connect Every Source"
+msgstr "すべてのソースに接続"
+
+#: src/app/ts-prefs-dialog.cpp:241
+msgid ""
+"Subscribe to all readable sequencer ports. Leave this off when something "
+"else is driving the synth, or it will echo back into it."
+msgstr ""
+"読み取り可能なすべてのシーケンサー・ポートに接続します。ほかのソフトが音源を"
+"鳴らしているときはオフのままにしてください。音が返ってしまいます。"
+
+#: src/app/ts-rom-setup.cpp:65
+msgid "Choose Your Sound Canvas ROM"
+msgstr "Sound Canvas の ROM を選択してください"
+
+#: src/app/ts-rom-setup.cpp:70
+#, c-format
+msgid ""
+"Tabula Sonora plays through the Roland Sound Canvas voice, which lives "
+"inside SCCore.dll. Point it at your own copy from %s %s."
+msgstr ""
+"Tabula Sonora は、SCCore.dll の中にあるローランド Sound Canvas の音源で再生し"
+"ます。お持ちの %s %s のコピーを指定してください。"
+
+#: src/app/ts-rom-setup.cpp:83
+msgid "Choose SCCore.dll…"
+msgstr "SCCore.dll を選択…"
+
+#: src/app/ts-rom-setup.cpp:92
+msgid "Checking the file…"
+msgstr "ファイルを確認しています…"
+
+#: src/app/ts-rom-setup.cpp:98
+msgid "The File It Needs"
+msgstr "必要なファイル"
+
+#: src/app/ts-rom-setup.cpp:106 src/app/ts-song-info-window.cpp:242
+msgid "File"
+msgstr "ファイル"
+
+#: src/app/ts-rom-setup.cpp:107
+msgid "Size"
+msgstr "サイズ"
+
+#: src/app/ts-rom-setup.cpp:109
+msgid "SHA-256"
+msgstr "SHA-256"
+
+#: src/app/ts-song-info-window.cpp:229
+#, c-format
+msgid "Standard MIDI File, format %d"
+msgstr "スタンダード MIDI ファイル、フォーマット %d"
+
+#: src/app/ts-song-info-window.cpp:231
+#, c-format
+msgid "Converted to Standard MIDI File, format %d"
+msgstr "スタンダード MIDI ファイルに変換、フォーマット %d"
+
+#: src/app/ts-song-info-window.cpp:243
+msgid "Container"
+msgstr "コンテナ"
+
+#: src/app/ts-song-info-window.cpp:244 src/app/ts-song-info-window.cpp:464
+msgid "Tracks"
+msgstr "トラック"
+
+#: src/app/ts-song-info-window.cpp:245
+msgid "Duration"
+msgstr "長さ"
+
+#: src/app/ts-song-info-window.cpp:254
+msgid "Asks For"
+msgstr "要求する音源"
+
+#: src/app/ts-song-info-window.cpp:254
+msgid "No preference"
+msgstr "指定なし"
+
+#: src/app/ts-song-info-window.cpp:264
+msgid "Playing On"
+msgstr "再生中の音源"
+
+#: src/app/ts-song-info-window.cpp:267
+msgid "Timing"
+msgstr "タイミング"
+
+#: src/app/ts-song-info-window.cpp:275
+#, c-format
+msgid "%d bpm, varying"
+msgstr "%d bpm (変化あり)"
+
+#: src/app/ts-song-info-window.cpp:276
+#, c-format
+msgid "%d bpm"
+msgstr "%d bpm"
+
+#: src/app/ts-song-info-window.cpp:279
+msgid "Tempo"
+msgstr "テンポ"
+
+#: src/app/ts-song-info-window.cpp:280
+msgid "Time"
+msgstr "拍子"
+
+#: src/app/ts-song-info-window.cpp:281
+msgid "Key"
+msgstr "調"
+
+#: src/app/ts-song-info-window.cpp:288
+msgid "Loop"
+msgstr "ループ"
+
+#: src/app/ts-song-info-window.cpp:293
+#, c-format
+msgid "%s – %s"
+msgstr "%s – %s"
+
+#: src/app/ts-song-info-window.cpp:295
+msgid "Soft"
+msgstr "ソフト"
+
+#: src/app/ts-song-info-window.cpp:295
+msgid "Hard"
+msgstr "ハード"
+
+#: src/app/ts-song-info-window.cpp:305
+msgid "Text"
+msgstr "テキスト"
+
+#: src/app/ts-song-info-window.cpp:321
+msgid "Markers"
+msgstr "マーカー"
+
+#: src/app/ts-song-info-window.cpp:342
+#, c-format
+msgid "%d. %s"
+msgstr "%d. %s"
+
+#: src/app/ts-song-info-window.cpp:342
+msgid "Untitled"
+msgstr "無題"
+
+#: src/app/ts-song-info-window.cpp:361
+#, c-format
+msgid "Channel %s"
+msgid_plural "Channels %s"
+msgstr[0] "チャンネル %s"
+
+#: src/app/ts-song-info-window.cpp:372
+#, c-format
+msgid "%d note"
+msgid_plural "%d notes"
+msgstr[0] "%d ノート"
+
+#: src/app/ts-song-info-window.cpp:392
+msgid "No Lyrics"
+msgstr "歌詞がありません"
+
+#: src/app/ts-song-info-window.cpp:422
+msgid "No Song Loaded"
+msgstr "曲が読み込まれていません"
+
+#: src/app/ts-song-info-window.cpp:449 src/app/ts-song-info-window.cpp:459
+msgid "Song"
+msgstr "曲"
+
+#: src/app/ts-song-info-window.cpp:450 src/app/ts-song-info-window.cpp:470
+#: src/app/ts-song-info-window.cpp:489 src/app/ts-song-info-window.cpp:500
+msgid "Song Information"
+msgstr "曲情報"
+
+#: src/app/ts-song-info-window.cpp:468
+msgid "Lyrics"
+msgstr "歌詞"
+
+#: src/app/ts-transport.cpp:95 src/app/ts-transport.cpp:274
+msgid "No file open"
+msgstr "ファイルが開かれていません"
+
+#. TRANSLATORS: %s is the module the file is being played on, e.g. "SC-8820".
+#: src/app/ts-transport.cpp:99
+#, c-format
+msgid "Sound Canvas voice · %s"
+msgstr "Sound Canvas 音源 · %s"
+
+#. TRANSLATORS: sounding voices over the polyphony ceiling, e.g. "12/64 voices". Deliberately
+#. one form rather than a plural: the noun agrees with the ceiling, not with the first number,
+#. so "1/64 voice" would be wrong.
+#: src/app/ts-transport.cpp:128 src/app/ts-transport.cpp:451
+#, c-format
+msgid "%d/%d voices"
+msgstr "%d/%d ボイス"
+
+#: src/app/ts-transport.cpp:150
+#, c-format
+msgid "%ld dropout"
+msgid_plural "%ld dropouts"
+msgstr[0] "%ld 回の音切れ"
+
+#. TRANSLATORS: a percentage of the engine's own output level. Some locales put a space
+#. before the sign.
+#: src/app/ts-transport.cpp:208 src/app/ts-transport.cpp:405
+#, c-format
+msgid "%d%%"
+msgstr "%d%%"
+
+#: src/app/ts-transport.cpp:229
+msgid "Pause"
+msgstr "一時停止"
+
+#: src/app/ts-transport.cpp:229
+msgid "Play"
+msgstr "再生"
+
+#: src/app/ts-transport.cpp:297
+msgid ""
+"Seek. Jumping replays the controllers up to that point, so the parts sound "
+"as they would have."
+msgstr ""
+"シーク。ジャンプすると、その位置までのコントロール・チェンジを再送するため、"
+"各パートは本来鳴るはずだった状態で鳴ります。"
+
+#: src/app/ts-transport.cpp:330
+msgid "Go back to the start"
+msgstr "先頭に戻る"
+
+#: src/app/ts-transport.cpp:338
+msgid ""
+"Repeat at the file's own loop points, or over the whole file if it declares "
+"none"
+msgstr ""
+"ファイル自身のループ・ポイントで繰り返します。ループが指定されていない場合は"
+"ファイル全体を繰り返します"
+
+#: src/app/ts-transport.cpp:344
+msgid "Panic: silence every voice and return each part to its power-on state"
+msgstr "パニック: すべてのボイスを消音し、各パートを電源投入時の状態に戻します"
+
+#: src/app/ts-transport.cpp:361
+msgid ""
+"Gain on the finished mix. 100% is the engine's own level; above it a loud "
+"file can clip."
+msgstr ""
+"最終ミックスに対するゲインです。100% がエンジン本来のレベルで、それを超えると"
+"音量の大きいファイルはクリップすることがあります。"
+
+#: src/app/ts-transport.cpp:426
+msgid "Exporting…"
+msgstr "書き出し中…"
+
+#: src/app/ts-transport.cpp:462
+msgid "The file put the engine into XG mode"
+msgstr "ファイルがエンジンを XG モードにしました"
+
+#: src/app/ts-transport.cpp:474
+msgid ""
+"The engine could not keep the buffer fed. Raise the buffer in Preferences."
+msgstr ""
+"エンジンがバッファを満たしきれませんでした。設定でバッファを大きくしてくださ"
+"い。"
+
+#: src/app/ts-voice-meter.cpp:138
+#, c-format
+msgid "%d voice sounding"
+msgid_plural "%d voices sounding"
+msgstr[0] "%d ボイス発音中"
+
+#: src/app/ts-window.cpp:58
+msgid "OK"
+msgstr "OK"
+
+#: src/app/ts-window.cpp:121 src/app/ts-window.cpp:129
+msgid "That file could not be played"
+msgstr "そのファイルは再生できませんでした"
+
+#: src/app/ts-window.cpp:122
+msgid ""
+"The engine reads MIDI files from disk, and this one is not on a local "
+"filesystem."
+msgstr ""
+"エンジンは MIDI ファイルをディスクから読み込みますが、このファイルはローカル"
+"のファイルシステム上にありません。"
+
+#: src/app/ts-window.cpp:221
+msgid "Open MIDI File"
+msgstr "MIDI ファイルを開く"
+
+#: src/app/ts-window.cpp:226
+msgid "MIDI and legacy music files"
+msgstr "MIDI および旧形式の音楽ファイル"
+
+#: src/app/ts-window.cpp:233
+msgid "All files"
+msgstr "すべてのファイル"
+
+#: src/app/ts-window.cpp:280
+msgid "That is not the right SCCore.dll"
+msgstr "その SCCore.dll は正しくありません"
+
+#: src/app/ts-window.cpp:358
+msgid "That file could not be copied"
+msgstr "そのファイルはコピーできませんでした"
+
+#: src/app/ts-window.cpp:365
+msgid "That file could not be installed"
+msgstr "そのファイルはインストールできませんでした"
+
+#: src/app/ts-window.cpp:378
+msgid "Choose SCCore.dll"
+msgstr "SCCore.dll を選択"
+
+#: src/app/ts-window.cpp:422
+msgid "That song could not be exported"
+msgstr "その曲は書き出せませんでした"
+
+#: src/app/ts-window.cpp:438
+msgid "That location cannot be written"
+msgstr "その場所には書き込めません"
+
+#: src/app/ts-window.cpp:439
+msgid "Choose somewhere on a local filesystem."
+msgstr "ローカルのファイルシステム上の場所を選んでください。"
+
+#: src/app/ts-window.cpp:462
+msgid "Export WAV"
+msgstr "WAV を書き出す"
+
+#. TRANSLATORS: %s is the name of the file that could not be opened.
+#: src/host/ts_session.cpp:87
+#, c-format
+msgid "Cannot read '%s'."
+msgstr "「%s」を読み取れません。"
+
+#: src/host/ts_session.cpp:400
+msgid "Load a DLL and a song before exporting."
+msgstr "書き出す前に DLL と曲を読み込んでください。"
+
+#: src/host/ts_song_info.cpp:328
+msgid "XG System On"
+msgstr "XG System On"
+
+#: src/host/ts_song_info.cpp:336
+msgid "GS Reset"
+msgstr "GS Reset"
+
+#: src/host/ts_song_info.cpp:339
+msgid "System Mode Set, which no SC-55 has"
+msgstr "System Mode Set (SC-55 には存在しません)"
+
+#. TRANSLATORS: %d is a bank select LSB value, 1-4, which names a module vintage.
+#: src/host/ts_song_info.cpp:358
+#, c-format
+msgid "bank select LSB %d"
+msgstr "バンク・セレクト LSB %d"
+
+#: src/host/ts_song_info.cpp:364
+msgid "General MIDI 2 System On"
+msgstr "General MIDI 2 System On"
+
+#: src/host/ts_song_info.cpp:368
+msgid "General MIDI System On"
+msgstr "General MIDI System On"
+
+#. TRANSLATORS: %s is a note name like "C" or "F#". This is a minor key signature.
+#: src/host/ts_song_info.cpp:554
+#, c-format
+msgid "%s minor"
+msgstr "%s マイナー"
+
+#. TRANSLATORS: %s is a note name. This is a major key signature.
+#: src/host/ts_song_info.cpp:556
+#, c-format
+msgid "%s major"
+msgstr "%s メジャー"
