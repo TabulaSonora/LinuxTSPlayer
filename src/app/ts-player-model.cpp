@@ -335,6 +335,18 @@ void ts_player_model_reset_channels(TsPlayerModel* self)
     ts_player_model_refresh(self);
 }
 
+void ts_player_model_send_control(TsPlayerModel* self, int port, int channel, int controller,
+                                  int value)
+{
+    self->player->send_channel(port, 0xB0 | (channel & 0x0F), controller, value);
+
+    // No refresh here, unlike mute and solo above. Those write a mask the render thread reads
+    // directly, so a snapshot taken immediately after already reflects them. This queues a message
+    // in the live-MIDI inbox that is not applied until the next block, so refreshing now would
+    // publish the value from *before* the send -- and a fader bound to that would visibly jump back
+    // under the pointer. The next tick reports it, some tens of milliseconds later.
+}
+
 // -- Settings ----------------------------------------------------------------------------------
 
 TSEngineSettings ts_player_model_get_settings(TsPlayerModel* self)

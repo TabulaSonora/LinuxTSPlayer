@@ -60,6 +60,19 @@ void ts_player_model_set_muted(TsPlayerModel* self, int part, gboolean muted);
 void ts_player_model_set_soloed(TsPlayerModel* self, int part, gboolean soloed);
 void ts_player_model_reset_channels(TsPlayerModel* self);
 
+/// Sends a control change to whatever part listens on `channel` of `port`, 0-based.
+///
+/// Addressed by receive channel rather than by part index, unlike mute and solo just above: those
+/// are a host-side gate keyed on the slot, and this is a MIDI message the engine dispatches exactly
+/// as it dispatches the file's own controllers. The two differ as soon as anything moves a part, and
+/// keying this on the slot would then aim it at a channel nothing is listening to.
+///
+/// It follows that this is not a setting: the value lasts until the song's next controller, a seek,
+/// or a reset overwrites it, and a part whose GS receive switch for that controller is off will
+/// ignore it outright. Whatever reads the result back has to be prepared for all three.
+void ts_player_model_send_control(TsPlayerModel* self, int port, int channel, int controller,
+                                  int value);
+
 // -- Engine settings -----------------------------------------------------------------------------
 
 /// The whole settings struct at once, so one change costs one rebuild rather than one per field.

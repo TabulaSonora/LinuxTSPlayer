@@ -38,3 +38,43 @@ partrow button {
     min-width: 24px;
     padding: 0 6px;
 }
+
+/*
+ * The volume and pan faders, which stock are the tallest thing on a strip by a wide margin: Adwaita
+ * gives a scale 12px of padding on each side of a 10px minimum, so 34px -- taller on its own than
+ * the whole strip is meant to be, and it would have undone every other rule in this file.
+ *
+ * The trough is thinned rather than the padding merely trimmed, because the padding is what the
+ * slider's negative margins spill into: leave the trough at its stock height and the knob has to
+ * shrink to a dot to fit. At 4px and 14px the pair measures 14px, comfortably under the 22px the
+ * toggles above already set as the strip's floor, so adding faders costs no height at all.
+ */
+partrow scale {
+    min-height: 0;
+    padding: 4px 0;
+}
+
+partrow scale > trough {
+    min-height: 4px;
+}
+
+partrow scale > trough > slider {
+    min-height: 14px;
+    min-width: 14px;
+    margin: -5px;
+}
+
+/*
+ * Pan's centre, drawn into the trough. `gtk_scale_add_mark` is the obvious way to say this and costs
+ * 12px of height -- a 6px indicator and a 6px margin -- which is most of a strip; a background stop
+ * costs none. Percentages rather than pixels so the tick stays centred at whatever width the fader
+ * is allocated, and dimmed to the same weight as the empty trough so it reads as a scale marking
+ * rather than as a value.
+ */
+partrow scale.pan > trough {
+    background-image: linear-gradient(to right,
+        transparent 48%,
+        color-mix(in srgb, currentColor 35%, transparent) 48%,
+        color-mix(in srgb, currentColor 35%, transparent) 52%,
+        transparent 52%);
+}

@@ -40,6 +40,16 @@ gboolean ts_part_get_muted(TsPart* self);
 gboolean ts_part_get_soloed(TsPart* self);
 int ts_part_get_voices(TsPart* self);
 
+/// CC#7, CC#10 and CC#11 as the engine holds them right now, 0..127.
+///
+/// These are the part's own controllers rather than anything this program keeps: a strip showing
+/// them is reading the same registers the file writes, which is why a fader over one of them can
+/// only ever be a window onto it. Expression has no fader because nothing in the interface should
+/// invite writing it -- it is here so a volume readout can say what else is scaling the part.
+int ts_part_get_volume(TsPart* self);
+int ts_part_get_pan(TsPart* self);
+int ts_part_get_expression(TsPart* self);
+
 /// Copies a snapshot's part state in, emitting `notify` only for what actually changed.
 ///
 /// `dimmed` is not the part's own state: it means something *else* is soloed, which the mixer knows
