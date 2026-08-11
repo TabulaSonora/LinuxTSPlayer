@@ -105,7 +105,7 @@ static void on_about(GSimpleAction* action, GVariant* parameter, gpointer user_d
     // The engine's commit, on the Details page beside the version.
     //
     // The version above names the player; this names the voice, and they move independently. A
-    // report that a kit sounds wrong is about a NativeTS commit, not about "0.1.0", and the person
+    // report that a kit sounds wrong is about a NativeTS commit, not about "1.1.0", and the person
     // making it should not have to be told how to find out which one they are running.
     //
     // The link goes to the commit rather than to the repository root because that is what makes the

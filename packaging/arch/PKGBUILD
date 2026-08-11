@@ -60,7 +60,7 @@ sha256sums=('SKIP' 'SKIP')
 pkgver() {
     cd "${srcdir}/${_pkgname}"
 
-    # Tagged releases read as 0.1.0.r12.gabc1234; an untagged tree falls back to a plain commit
+    # Tagged releases read as 1.1.0.r12.gabc1234; an untagged tree falls back to a plain commit
     # count, which is what this gets until the first tag exists.
     #
     # The two cases are separated rather than joined with ||, because a pipeline reports the exit

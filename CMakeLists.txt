@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.24)
 
 project(LinuxTSPlayer
-    VERSION 0.1.0
+    VERSION 1.1.0
     DESCRIPTION "A Libadwaita player for the Tabula Sonora Sound Canvas voice"
     # C as well as C++: glib-compile-resources emits C, and gconstructor.h is not C++.
     LANGUAGES C CXX)
@@ -46,7 +46,7 @@ set(TSGUI_NATIVETS_DIR "${_tsgui_default_nativets}" CACHE PATH
 #
 # The About dialog names the NativeTS commit, because it is the first thing worth knowing about a
 # report that the voice sounds wrong: this host tracks the engine by submodule pointer, and the
-# voice moves underneath it between two builds of the same TSGUI_VERSION. "0.1.0" identifies the
+# voice moves underneath it between two builds of the same TSGUI_VERSION. "1.1.0" identifies the
 # player and says nothing about the synthesizer, which is the part being listened to.
 #
 # Read from the tree actually being compiled rather than from `git submodule status` here, so a
