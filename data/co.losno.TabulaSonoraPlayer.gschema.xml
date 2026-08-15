@@ -53,6 +53,17 @@
       </description>
     </key>
 
+    <key name="flush-before-sysex" type="b">
+      <default>false</default>
+      <summary>Deliver dropped SysEx</summary>
+      <description>
+        Start a fresh input-queue window at every SysEx message, so a bulk dump larger than one
+        control tick arrives whole. The module takes 2,048 packets per tick and silently discards
+        the rest, and off reproduces that; on plays a file as written rather than as the hardware
+        receives it, which is not what a render compared against SCCore.dll wants.
+      </description>
+    </key>
+
     <key name="reverb" type="b"><default>true</default><summary>Reverb send</summary></key>
     <key name="chorus" type="b"><default>true</default><summary>Chorus send</summary></key>
     <key name="delay" type="b"><default>true</default><summary>System delay</summary></key>

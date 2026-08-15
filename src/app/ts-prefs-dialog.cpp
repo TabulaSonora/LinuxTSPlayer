@@ -199,6 +199,14 @@ AdwDialog* ts_prefs_dialog_new(TsPlayerModel* model)
                _("A wide band-limiting resampler with no pitch ceiling. Turn it off to reproduce "
                  "SCCore.dll exactly, including its aliasing and the glides it stalls."));
 
+    // The other departure from the module, and worded from the other side: this one is off by
+    // default, so "on" is the half that needs explaining. Deliberately not phrased as a fix for
+    // anything -- a file whose bulk dump the hardware truncates is being played correctly when it
+    // is truncated here too, and this offers the other reading of it rather than a better one.
+    add_switch(voice, self->settings, "flush-before-sysex", _("Deliver Dropped SysEx"),
+               _("The module discards a bulk dump too large for one control tick, and so does "
+                 "this. Turn it on to hear such a file as it was written instead."));
+
     adw_preferences_page_add(page, voice);
 
     // -- Effects --

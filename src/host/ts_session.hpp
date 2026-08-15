@@ -165,6 +165,20 @@ public:
     [[nodiscard]] std::int64_t position() const noexcept;
     [[nodiscard]] std::int64_t length() const noexcept { return song_length_; }
 
+    /// Where playing this song begins: its first note, past whatever silent lead-in it opens with.
+    ///
+    /// What "back to the start" has to mean for anything that restarts a song, because arming one
+    /// puts it here and not at zero -- see `arm_player`. Seeking literally to zero is still
+    /// available and still valid; it plays the lead-in, which is what dragging the slider to the
+    /// far left should do and not what pressing Play on a finished song should.
+    ///
+    /// One sample before the note rather than onto it, matching `SequencePlayer::skip_lead_in`, so
+    /// the note is dispatched by the render that follows instead of being consumed by the seek.
+    [[nodiscard]] std::int64_t start_frame() const noexcept
+    {
+        return song_first_note_ > 0 ? song_first_note_ - 1 : 0;
+    }
+
     /// Whether the song has been rendered past its end plus the tail.
     [[nodiscard]] bool complete() const noexcept;
 
@@ -256,6 +270,13 @@ private:
     std::vector<MidiEvent> song_events_;
     std::int64_t song_length_ = 0;
     std::optional<smf::SongLoop> song_loop_;
+
+    /// The earliest note-on across every track, or zero when the song starts on one.
+    ///
+    /// Across *every* track, not the first one a track-ordered walk reaches: a file whose first
+    /// track rests until the second section would otherwise start there, which for a looping
+    /// arrangement means skipping the introduction and landing on the loop.
+    std::int64_t song_first_note_ = 0;
     SongInfo song_info_;
     bool looping_ = false;
 

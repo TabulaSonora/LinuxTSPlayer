@@ -53,6 +53,21 @@ typedef struct {
     /// compared against the DLL needs.
     bool extendedInterpolation;
 
+    /// Deliver the SysEx the module's input queue would discard.
+    ///
+    /// Off by default, and the *second* place this program can knowingly depart from `SCCore.dll`
+    /// -- the same shape as `extendedInterpolation` above, and to be treated the same way.
+    ///
+    /// The module's input queue takes 2,048 packets per control tick and silently drops the rest,
+    /// so a file whose opening is a bulk dump larger than that never has its tail delivered and the
+    /// hardware plays whatever the dump's surviving prefix chose. The engine reproduces that.
+    /// Turning this on starts a fresh queue window at every SysEx message, which is something the
+    /// module cannot be made to do: upstream measured `TG_flushMidi` before every message and the
+    /// render came back byte-identical, because the bound is on the ready buffer that only
+    /// `TG_Process` drains. So this plays a file as written rather than as the hardware receives
+    /// it, and anything being compared against the DLL wants it off.
+    bool flushBeforeSysex;
+
     /// Linear gain on the finished mix. Applied live, without a rebuild.
     double outputGain;
 } TSEngineSettings;

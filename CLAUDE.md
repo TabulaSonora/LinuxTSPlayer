@@ -90,6 +90,12 @@ binaries link `tsgui_host` alone).
   borrowing the one above. Changing a `ToneGeneratorOptions` field rebuilds only the generator, so
   switching vintage or effects costs sounding voices, not a table reload. Not thread-safe by design;
   `Player` gives it one owning thread, which is exactly `ToneGenerator`'s contract.
+  **`arm_player` and `run_export` deliberately disagree**, following upstream's own split between
+  `apps/audio` and `render`: playback skips the silent lead-in and spreads a dense opening burst
+  over control ticks the way a cable would, and an export does neither, because its length and
+  alignment are what `export-matches-cli` byte-compares. So a file with an opening bulk dump does
+  not export the way it plays — by as much as 2.31 dB — and that is the intended difference. It also
+  means "the start" of a song is `Session::start_frame`, its first note, and not sample zero.
 - **`Player`** (`ts_player.hpp`) is a session + render thread + `FrameRing`. The render thread pulls
   128-frame blocks and fills the ring to a lead of `latency_ms`; the audio callback only copies out.
   Three deliberately different synchronisation mechanisms:

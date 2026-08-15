@@ -15,7 +15,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Tabula Sonora Player 1.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/TabulaSonora/TSGui/issues\n"
-"POT-Creation-Date: 2026-08-09 16:00-0400\n"
+"POT-Creation-Date: 2026-08-15 11:34-0400\n"
 "PO-Revision-Date: 2026-08-09 15:46-0400\n"
 "Last-Translator: \n"
 "Language-Team: Spanish (Chile)\n"
@@ -173,31 +173,50 @@ msgstr ""
 "desactivado reproduce el módulo exactamente, incluidos el aliasing y los "
 "glissandos que se detienen."
 
-#: data/co.losno.TabulaSonoraPlayer.gschema.xml:56
+#: data/co.losno.TabulaSonoraPlayer.gschema.xml:58
+msgid "Deliver dropped SysEx"
+msgstr "Entregar los SysEx descartados"
+
+#: data/co.losno.TabulaSonoraPlayer.gschema.xml:59
+msgid ""
+"Start a fresh input-queue window at every SysEx message, so a bulk dump "
+"larger than one control tick arrives whole. The module takes 2,048 packets "
+"per tick and silently discards the rest, and off reproduces that; on plays a "
+"file as written rather than as the hardware receives it, which is not what a "
+"render compared against SCCore.dll wants."
+msgstr ""
+"Abre una nueva ventana de la cola de entrada en cada mensaje SysEx, de modo "
+"que un volcado masivo mayor que un tick de control llegue completo. El "
+"módulo acepta 2.048 paquetes por tick y descarta el resto en silencio, y "
+"desactivado reproduce eso mismo; activado reproduce el archivo tal como fue "
+"escrito y no como lo recibe el hardware, que no es lo que necesita una "
+"renderización comparada con SCCore.dll."
+
+#: data/co.losno.TabulaSonoraPlayer.gschema.xml:67
 msgid "Reverb send"
 msgstr "Envío de reverberación"
 
-#: data/co.losno.TabulaSonoraPlayer.gschema.xml:57
+#: data/co.losno.TabulaSonoraPlayer.gschema.xml:68
 msgid "Chorus send"
 msgstr "Envío de chorus"
 
-#: data/co.losno.TabulaSonoraPlayer.gschema.xml:58
+#: data/co.losno.TabulaSonoraPlayer.gschema.xml:69
 msgid "System delay"
 msgstr "Delay del sistema"
 
-#: data/co.losno.TabulaSonoraPlayer.gschema.xml:59
+#: data/co.losno.TabulaSonoraPlayer.gschema.xml:70
 msgid "Insertion effects"
 msgstr "Efectos de inserción"
 
-#: data/co.losno.TabulaSonoraPlayer.gschema.xml:64
+#: data/co.losno.TabulaSonoraPlayer.gschema.xml:75
 msgid "Linear gain on the finished mix"
 msgstr "Ganancia lineal sobre la mezcla final"
 
-#: data/co.losno.TabulaSonoraPlayer.gschema.xml:70
+#: data/co.losno.TabulaSonoraPlayer.gschema.xml:81
 msgid "How far ahead of the device to render"
 msgstr "Cuánto se adelanta el renderizado respecto del dispositivo"
 
-#: data/co.losno.TabulaSonoraPlayer.gschema.xml:71
+#: data/co.losno.TabulaSonoraPlayer.gschema.xml:82
 msgid ""
 "Lower answers a keyboard sooner; raise it if you hear dropouts. Changing it "
 "never reallocates the ring, so it is safe to drag while playing."
@@ -206,15 +225,15 @@ msgstr ""
 "nunca reasigna el búfer circular, así que se puede arrastrar durante la "
 "reproducción."
 
-#: data/co.losno.TabulaSonoraPlayer.gschema.xml:79
+#: data/co.losno.TabulaSonoraPlayer.gschema.xml:90
 msgid "Repeat at the file's own loop points"
 msgstr "Repetir en los puntos de bucle del propio archivo"
 
-#: data/co.losno.TabulaSonoraPlayer.gschema.xml:84
+#: data/co.losno.TabulaSonoraPlayer.gschema.xml:95
 msgid "Subscribe to every readable ALSA sequencer port"
 msgstr "Suscribirse a todos los puertos legibles del secuenciador ALSA"
 
-#: data/co.losno.TabulaSonoraPlayer.gschema.xml:85
+#: data/co.losno.TabulaSonoraPlayer.gschema.xml:96
 msgid ""
 "Convenient with one keyboard attached, and wrong on a machine running a "
 "sequencer, where it would echo everything back into the synth."
@@ -222,11 +241,11 @@ msgstr ""
 "Cómodo con un solo teclado conectado, y equivocado en una máquina con un "
 "secuenciador, donde devolvería todo como eco al sintetizador."
 
-#: data/co.losno.TabulaSonoraPlayer.gschema.xml:93
+#: data/co.losno.TabulaSonoraPlayer.gschema.xml:104
 msgid "Whether the stored ROM has passed a full hash"
 msgstr "Si la ROM almacenada ha pasado una verificación completa de hash"
 
-#: data/co.losno.TabulaSonoraPlayer.gschema.xml:94
+#: data/co.losno.TabulaSonoraPlayer.gschema.xml:105
 msgid ""
 "Once true, later launches check only size and PE timestamp, which is all a "
 "file already verified once needs."
@@ -340,7 +359,7 @@ msgstr "Puerto %c, canal %d"
 #. TRANSLATORS: %d is a GS drum kit number, as the module's own display shows it.
 #. TRANSLATORS: %d is a GS drum kit number, used when the module gives the
 #. kit no name of its own.
-#: src/app/ts-part-object.cpp:230 src/host/ts_session.cpp:381
+#: src/app/ts-part-object.cpp:230 src/host/ts_session.cpp:394
 #, c-format
 msgid "Kit %d"
 msgstr "Kit %d"
@@ -440,7 +459,7 @@ msgid_plural "%ld dropouts so far"
 msgstr[0] "%ld corte hasta ahora"
 msgstr[1] "%ld cortes hasta ahora"
 
-#: src/app/ts-prefs-dialog.cpp:143 src/app/ts-prefs-dialog.cpp:228
+#: src/app/ts-prefs-dialog.cpp:143 src/app/ts-prefs-dialog.cpp:236
 msgid "No dropouts"
 msgstr "Sin cortes"
 
@@ -504,30 +523,43 @@ msgstr ""
 "glissandos que detiene."
 
 #: src/app/ts-prefs-dialog.cpp:206
+msgid "Deliver Dropped SysEx"
+msgstr "Entregar los SysEx descartados"
+
+#: src/app/ts-prefs-dialog.cpp:207
+msgid ""
+"The module discards a bulk dump too large for one control tick, and so does "
+"this. Turn it on to hear such a file as it was written instead."
+msgstr ""
+"El módulo descarta un volcado masivo demasiado grande para un tick de "
+"control, y esto también. Actívalo para escuchar un archivo así tal como fue "
+"escrito."
+
+#: src/app/ts-prefs-dialog.cpp:214
 msgid "Effects"
 msgstr "Efectos"
 
-#: src/app/ts-prefs-dialog.cpp:207
+#: src/app/ts-prefs-dialog.cpp:215
 msgid "Reverb"
 msgstr "Reverberación"
 
-#: src/app/ts-prefs-dialog.cpp:208
+#: src/app/ts-prefs-dialog.cpp:216
 msgid "Chorus"
 msgstr "Chorus"
 
-#: src/app/ts-prefs-dialog.cpp:209
+#: src/app/ts-prefs-dialog.cpp:217
 msgid "Delay"
 msgstr "Delay"
 
-#: src/app/ts-prefs-dialog.cpp:210
+#: src/app/ts-prefs-dialog.cpp:218
 msgid "Insertion Effects"
 msgstr "Efectos de inserción"
 
-#: src/app/ts-prefs-dialog.cpp:219
+#: src/app/ts-prefs-dialog.cpp:227
 msgid "Latency"
 msgstr "Latencia"
 
-#: src/app/ts-prefs-dialog.cpp:221
+#: src/app/ts-prefs-dialog.cpp:229
 msgid ""
 "How far ahead the engine renders. Lower answers a keyboard sooner; raise it "
 "if you hear dropouts."
@@ -535,19 +567,19 @@ msgstr ""
 "Cuánto se adelanta el motor al renderizar. Menos responde antes a un "
 "teclado; súbelo si escuchas cortes."
 
-#: src/app/ts-prefs-dialog.cpp:225
+#: src/app/ts-prefs-dialog.cpp:233
 msgid "Buffer"
 msgstr "Búfer"
 
-#: src/app/ts-prefs-dialog.cpp:239
+#: src/app/ts-prefs-dialog.cpp:247
 msgid "MIDI Input"
 msgstr "Entrada MIDI"
 
-#: src/app/ts-prefs-dialog.cpp:240
+#: src/app/ts-prefs-dialog.cpp:248
 msgid "Connect Every Source"
 msgstr "Conectar todas las fuentes"
 
-#: src/app/ts-prefs-dialog.cpp:241
+#: src/app/ts-prefs-dialog.cpp:249
 msgid ""
 "Subscribe to all readable sequencer ports. Leave this off when something "
 "else is driving the synth, or it will echo back into it."
@@ -878,12 +910,12 @@ msgid "Export WAV"
 msgstr "Exportar WAV"
 
 #. TRANSLATORS: %s is the name of the file that could not be opened.
-#: src/host/ts_session.cpp:87
+#: src/host/ts_session.cpp:88
 #, c-format
 msgid "Cannot read '%s'."
 msgstr "No se puede leer «%s»."
 
-#: src/host/ts_session.cpp:400
+#: src/host/ts_session.cpp:413
 msgid "Load a DLL and a song before exporting."
 msgstr "Carga una DLL y una canción antes de exportar."
 

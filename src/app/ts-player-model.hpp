@@ -45,6 +45,14 @@ void ts_player_model_play(TsPlayerModel* self);
 void ts_player_model_pause(TsPlayerModel* self);
 void ts_player_model_toggle_playing(TsPlayerModel* self);
 void ts_player_model_seek(TsPlayerModel* self, double seconds);
+
+/// Back to where the song starts -- its first note, not sample zero.
+///
+/// The distinction exists because a song is armed past its silent lead-in, so "the beginning" as
+/// the transport has ever shown it is not zero. Restarting is what a finished song does on Play and
+/// what MPRIS Stop means; dragging the slider to the far left is still a plain seek to zero, and
+/// still plays the lead-in.
+void ts_player_model_restart(TsPlayerModel* self);
 void ts_player_model_panic(TsPlayerModel* self);
 
 // -- Mixer ---------------------------------------------------------------------------------------

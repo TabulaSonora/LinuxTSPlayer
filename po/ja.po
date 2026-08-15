@@ -14,7 +14,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Tabula Sonora Player 1.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/TabulaSonora/TSGui/issues\n"
-"POT-Creation-Date: 2026-08-09 16:00-0400\n"
+"POT-Creation-Date: 2026-08-15 11:34-0400\n"
 "PO-Revision-Date: 2026-08-09 15:46-0400\n"
 "Last-Translator: \n"
 "Language-Team: Japanese\n"
@@ -171,31 +171,49 @@ msgstr ""
 "にすると、エイリアシングや止まってしまうグライドも含めて実機どおりに再現しま"
 "す。"
 
-#: data/co.losno.TabulaSonoraPlayer.gschema.xml:56
+#: data/co.losno.TabulaSonoraPlayer.gschema.xml:58
+msgid "Deliver dropped SysEx"
+msgstr "破棄された SysEx を届ける"
+
+#: data/co.losno.TabulaSonoraPlayer.gschema.xml:59
+msgid ""
+"Start a fresh input-queue window at every SysEx message, so a bulk dump "
+"larger than one control tick arrives whole. The module takes 2,048 packets "
+"per tick and silently discards the rest, and off reproduces that; on plays a "
+"file as written rather than as the hardware receives it, which is not what a "
+"render compared against SCCore.dll wants."
+msgstr ""
+"SysEx メッセージごとに入力キューのウィンドウを開き直し、制御ティック 1 回分に"
+"収まらない大きなバルクダンプも完全に届くようにします。モジュールは 1 ティック"
+"あたり 2,048 パケットを受け取り、残りを黙って捨てます。オフはその挙動をそのま"
+"ま再現し、オンはハードウェアが受け取るとおりではなく、ファイルに書かれたとおり"
+"に再生します。SCCore.dll と比較するレンダリングに向いた設定ではありません。"
+
+#: data/co.losno.TabulaSonoraPlayer.gschema.xml:67
 msgid "Reverb send"
 msgstr "リバーブ・センド"
 
-#: data/co.losno.TabulaSonoraPlayer.gschema.xml:57
+#: data/co.losno.TabulaSonoraPlayer.gschema.xml:68
 msgid "Chorus send"
 msgstr "コーラス・センド"
 
-#: data/co.losno.TabulaSonoraPlayer.gschema.xml:58
+#: data/co.losno.TabulaSonoraPlayer.gschema.xml:69
 msgid "System delay"
 msgstr "システム・ディレイ"
 
-#: data/co.losno.TabulaSonoraPlayer.gschema.xml:59
+#: data/co.losno.TabulaSonoraPlayer.gschema.xml:70
 msgid "Insertion effects"
 msgstr "インサーション・エフェクト"
 
-#: data/co.losno.TabulaSonoraPlayer.gschema.xml:64
+#: data/co.losno.TabulaSonoraPlayer.gschema.xml:75
 msgid "Linear gain on the finished mix"
 msgstr "最終ミックスに対するリニア・ゲイン"
 
-#: data/co.losno.TabulaSonoraPlayer.gschema.xml:70
+#: data/co.losno.TabulaSonoraPlayer.gschema.xml:81
 msgid "How far ahead of the device to render"
 msgstr "デバイスに対してどれだけ先までレンダリングするか"
 
-#: data/co.losno.TabulaSonoraPlayer.gschema.xml:71
+#: data/co.losno.TabulaSonoraPlayer.gschema.xml:82
 msgid ""
 "Lower answers a keyboard sooner; raise it if you hear dropouts. Changing it "
 "never reallocates the ring, so it is safe to drag while playing."
@@ -204,15 +222,15 @@ msgstr ""
 "てください。変更してもリング・バッファは確保し直されないため、再生中に動かし"
 "ても安全です。"
 
-#: data/co.losno.TabulaSonoraPlayer.gschema.xml:79
+#: data/co.losno.TabulaSonoraPlayer.gschema.xml:90
 msgid "Repeat at the file's own loop points"
 msgstr "ファイル自身のループ・ポイントで繰り返す"
 
-#: data/co.losno.TabulaSonoraPlayer.gschema.xml:84
+#: data/co.losno.TabulaSonoraPlayer.gschema.xml:95
 msgid "Subscribe to every readable ALSA sequencer port"
 msgstr "読み取り可能なすべての ALSA シーケンサー・ポートに接続する"
 
-#: data/co.losno.TabulaSonoraPlayer.gschema.xml:85
+#: data/co.losno.TabulaSonoraPlayer.gschema.xml:96
 msgid ""
 "Convenient with one keyboard attached, and wrong on a machine running a "
 "sequencer, where it would echo everything back into the synth."
@@ -220,11 +238,11 @@ msgstr ""
 "キーボードを 1 台つないでいるときは便利ですが、シーケンサーを動かしているマシ"
 "ンではすべてが音源へ返ってしまうため適しません。"
 
-#: data/co.losno.TabulaSonoraPlayer.gschema.xml:93
+#: data/co.losno.TabulaSonoraPlayer.gschema.xml:104
 msgid "Whether the stored ROM has passed a full hash"
 msgstr "保存された ROM が完全なハッシュ検証を通過したかどうか"
 
-#: data/co.losno.TabulaSonoraPlayer.gschema.xml:94
+#: data/co.losno.TabulaSonoraPlayer.gschema.xml:105
 msgid ""
 "Once true, later launches check only size and PE timestamp, which is all a "
 "file already verified once needs."
@@ -337,7 +355,7 @@ msgstr "ポート %c、チャンネル %d"
 #. TRANSLATORS: %d is a GS drum kit number, as the module's own display shows it.
 #. TRANSLATORS: %d is a GS drum kit number, used when the module gives the
 #. kit no name of its own.
-#: src/app/ts-part-object.cpp:230 src/host/ts_session.cpp:381
+#: src/app/ts-part-object.cpp:230 src/host/ts_session.cpp:394
 #, c-format
 msgid "Kit %d"
 msgstr "キット %d"
@@ -437,7 +455,7 @@ msgid "%ld dropout so far"
 msgid_plural "%ld dropouts so far"
 msgstr[0] "これまでに %ld 回の音切れ"
 
-#: src/app/ts-prefs-dialog.cpp:143 src/app/ts-prefs-dialog.cpp:228
+#: src/app/ts-prefs-dialog.cpp:143 src/app/ts-prefs-dialog.cpp:236
 msgid "No dropouts"
 msgstr "音切れなし"
 
@@ -499,30 +517,42 @@ msgstr ""
 "ングや止まってしまうグライドも含めて SCCore.dll をそのまま再現します。"
 
 #: src/app/ts-prefs-dialog.cpp:206
+msgid "Deliver Dropped SysEx"
+msgstr "破棄された SysEx を届ける"
+
+#: src/app/ts-prefs-dialog.cpp:207
+msgid ""
+"The module discards a bulk dump too large for one control tick, and so does "
+"this. Turn it on to hear such a file as it was written instead."
+msgstr ""
+"モジュールは制御ティック 1 回分に収まらないバルクダンプを捨てます。このエンジ"
+"ンも同じです。オンにすると、そうしたファイルを書かれたとおりに聴けます。"
+
+#: src/app/ts-prefs-dialog.cpp:214
 msgid "Effects"
 msgstr "エフェクト"
 
-#: src/app/ts-prefs-dialog.cpp:207
+#: src/app/ts-prefs-dialog.cpp:215
 msgid "Reverb"
 msgstr "リバーブ"
 
-#: src/app/ts-prefs-dialog.cpp:208
+#: src/app/ts-prefs-dialog.cpp:216
 msgid "Chorus"
 msgstr "コーラス"
 
-#: src/app/ts-prefs-dialog.cpp:209
+#: src/app/ts-prefs-dialog.cpp:217
 msgid "Delay"
 msgstr "ディレイ"
 
-#: src/app/ts-prefs-dialog.cpp:210
+#: src/app/ts-prefs-dialog.cpp:218
 msgid "Insertion Effects"
 msgstr "インサーション・エフェクト"
 
-#: src/app/ts-prefs-dialog.cpp:219
+#: src/app/ts-prefs-dialog.cpp:227
 msgid "Latency"
 msgstr "レイテンシー"
 
-#: src/app/ts-prefs-dialog.cpp:221
+#: src/app/ts-prefs-dialog.cpp:229
 msgid ""
 "How far ahead the engine renders. Lower answers a keyboard sooner; raise it "
 "if you hear dropouts."
@@ -530,19 +560,19 @@ msgstr ""
 "エンジンがどれだけ先までレンダリングするか。小さくするとキーボードへの反応が"
 "速くなり、音切れが聞こえる場合は大きくします。"
 
-#: src/app/ts-prefs-dialog.cpp:225
+#: src/app/ts-prefs-dialog.cpp:233
 msgid "Buffer"
 msgstr "バッファ"
 
-#: src/app/ts-prefs-dialog.cpp:239
+#: src/app/ts-prefs-dialog.cpp:247
 msgid "MIDI Input"
 msgstr "MIDI 入力"
 
-#: src/app/ts-prefs-dialog.cpp:240
+#: src/app/ts-prefs-dialog.cpp:248
 msgid "Connect Every Source"
 msgstr "すべてのソースに接続"
 
-#: src/app/ts-prefs-dialog.cpp:241
+#: src/app/ts-prefs-dialog.cpp:249
 msgid ""
 "Subscribe to all readable sequencer ports. Leave this off when something "
 "else is driving the synth, or it will echo back into it."
@@ -867,12 +897,12 @@ msgid "Export WAV"
 msgstr "WAV を書き出す"
 
 #. TRANSLATORS: %s is the name of the file that could not be opened.
-#: src/host/ts_session.cpp:87
+#: src/host/ts_session.cpp:88
 #, c-format
 msgid "Cannot read '%s'."
 msgstr "「%s」を読み取れません。"
 
-#: src/host/ts_session.cpp:400
+#: src/host/ts_session.cpp:413
 msgid "Load a DLL and a song before exporting."
 msgstr "書き出す前に DLL と曲を読み込んでください。"
 

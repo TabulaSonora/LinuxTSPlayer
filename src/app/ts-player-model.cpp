@@ -270,8 +270,7 @@ void ts_player_model_play(TsPlayerModel* self)
 {
     // Pressing play on a finished song starts it again rather than doing nothing.
     if (self->complete) {
-        self->player->seek(0);
-        set_field(self, self->complete, FALSE, PROP_COMPLETE);
+        ts_player_model_restart(self);
     }
 
     self->player->set_paused(false);
@@ -303,6 +302,19 @@ void ts_player_model_seek(TsPlayerModel* self, double seconds)
     // tenth of a second before the render thread reports the new position.
     set_field(self, self->position, std::max(0.0, seconds), PROP_POSITION);
     set_field(self, self->complete, FALSE, PROP_COMPLETE);
+}
+
+void ts_player_model_restart(TsPlayerModel* self)
+{
+    // Through the seek above rather than beside it, so restarting picks up the optimistic position
+    // update and the cleared completion flag for free.
+    //
+    // Not `seek(0.0)`, which is what both callers used to do: a song is armed at its first note,
+    // so zero is a position the transport has never been at on its own and restarting there would
+    // play a lead-in that the first play skipped.
+    ts_player_model_seek(self,
+                         static_cast<double>(self->player->start_frame())
+                             / static_cast<double>(ts::host::Session::sample_rate));
 }
 
 void ts_player_model_panic(TsPlayerModel* self)

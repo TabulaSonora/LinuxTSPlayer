@@ -58,8 +58,16 @@ void Player::load_song(const std::string& path)
 {
     const std::lock_guard<std::mutex> guard{lock_};
     session_.load_song(path);
-    pending_seek_ = 0;
-    audible_.store(0, std::memory_order_relaxed);
+
+    // The song's own start, not zero, and the difference matters now that arming one skips its
+    // silent lead-in: seeking to zero here would undo that immediately and put the transport back
+    // in the silence it was just moved past.
+    //
+    // The seek is still queued rather than skipped, because it is doing a second job -- the render
+    // thread flushes the ring on a pending seek, and without it the previous song's last ring-full
+    // would play over the new one's opening.
+    pending_seek_ = session_.position();
+    audible_.store(session_.position(), std::memory_order_relaxed);
     publish();
 }
 
@@ -95,6 +103,12 @@ void Player::seek(std::int64_t frame)
 {
     const std::lock_guard<std::mutex> guard{lock_};
     pending_seek_ = std::max<std::int64_t>(0, frame);
+}
+
+std::int64_t Player::start_frame() const
+{
+    const std::lock_guard<std::mutex> guard{lock_};
+    return session_.start_frame();
 }
 
 void Player::panic()

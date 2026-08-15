@@ -25,6 +25,7 @@ extern "C" TSEngineSettings TSEngineSettingsDefault(void)
     settings.delay = defaults.delay;
     settings.efx = defaults.efx;
     settings.extendedInterpolation = defaults.extended_interpolation;
+    settings.flushBeforeSysex = defaults.flush_before_sysex;
     settings.outputGain = defaults.output_gain;
     return settings;
 }
@@ -120,6 +121,11 @@ void Session::load_song(const std::string& path)
     song_events_ = std::move(events);
     song_loop_ = parsed.loop;
 
+    // Kept beside the events because `arm_player` rebuilds the `smf::Song` from these three fields
+    // rather than holding the parsed one, and a `Song` assembled without this has `first_note`
+    // zero -- which compiles, and quietly turns `skip_lead_in` into a no-op.
+    song_first_note_ = parsed.first_note;
+
     // Taken from the same bytes, after the parse rather than before it: `smf::load` is what decides
     // whether this file is playable at all, and a file it throws on should not leave a half-filled
     // information window behind describing something that never loaded.
@@ -145,6 +151,7 @@ void Session::unload_song()
     song_name_.clear();
     song_length_ = 0;
     song_loop_.reset();
+    song_first_note_ = 0;
     song_info_ = {};
     used_channels_.fill(false);
     if (engine_) {
@@ -161,12 +168,18 @@ void Session::set_settings(const TSEngineSettings& settings)
     // note-on and offers no setter, so a session that only stored the new value would go on
     // sounding the old kernel for as long as the generator lived -- the toggle would appear to do
     // nothing until some other setting happened to rebuild, and then take effect retroactively.
+    //
+    // Flushing before SysEx is here for a weaker reason than the rest: the generator reads it out
+    // of its stored options on every message rather than latching it, so it would take effect on
+    // its own -- but nothing hands a generator new options without constructing one, so a rebuild
+    // is the only way this session has to deliver the change at all.
     const bool structural = settings.map != settings_.map
                             || settings.polyphony != settings_.polyphony
                             || settings.ports != settings_.ports || settings.reverb != settings_.reverb
                             || settings.chorus != settings_.chorus || settings.delay != settings_.delay
                             || settings.efx != settings_.efx
-                            || settings.extendedInterpolation != settings_.extendedInterpolation;
+                            || settings.extendedInterpolation != settings_.extendedInterpolation
+                            || settings.flushBeforeSysex != settings_.flushBeforeSysex;
 
     settings_ = settings;
 
@@ -431,6 +444,20 @@ void Session::run_export(const ExportPlan& plan, const std::string& path,
     plan.notes->noise().reset();
 
     ToneGenerator engine{*plan.notes, plan.options};
+
+    // No `first_note`, no `skip_lead_in`, no `set_spread_bursts` -- and the omission is the point,
+    // so it is written down rather than left to be inferred from three absent calls.
+    //
+    // An export is data, not a performance. Its length and its alignment are what a comparison
+    // against a reference render rests on, and `tabula-sonora render` leaves all three off unless
+    // asked for them by flag. Skipping the lead-in here would shorten the file by however much
+    // silence it began with; spreading a burst would move the audio by as much as 2.31 dB on a
+    // file that has one. Either would take `export-matches-cli` from a byte comparison to a
+    // near-enough one, which is the whole of what that test is for.
+    //
+    // So a song exported from this program does not sound like the same song played by it, on a
+    // file with an opening burst. That is the intended difference, and it is upstream's: the
+    // players stand in for a cable, and a render answers to the reference.
     SequencePlayer player{engine, smf::Song{plan.events, plan.loop}};
 
     // One pass, not a chunked loop, and this is not a stylistic choice.
@@ -471,6 +498,7 @@ ToneGeneratorOptions Session::options() const
     options.delay = settings_.delay;
     options.efx = settings_.efx;
     options.extended_interpolation = settings_.extendedInterpolation;
+    options.flush_before_sysex = settings_.flushBeforeSysex;
     options.output_gain = settings_.outputGain;
     options.channels = &channels_;
 
@@ -534,8 +562,27 @@ void Session::rebuild()
 
 void Session::arm_player()
 {
-    player_.emplace(*engine_, smf::Song{song_events_, song_loop_});
+    player_.emplace(*engine_, smf::Song{song_events_, song_loop_, song_first_note_});
     player_->set_loop_count(looping_ ? -1 : 1);
+
+    // The two things that make this a player rather than a renderer, both of them upstream's own
+    // choice for `apps/audio` and deliberately *not* taken on the export path below.
+    //
+    // Start where the music does. A file that opens with a bar of bank selects and controllers is
+    // silence until its first note, and a listener waiting through it cannot tell that from a
+    // broken file or a dead output. Nothing is lost by skipping: `skip_lead_in` goes through
+    // `seek`, so every controller, bank select and SysEx in the lead-in is still replayed into the
+    // engine, and the only events dropped are notes, of which there are none before the first one.
+    player_->skip_lead_in();
+
+    // And hand a dense opening over at a cable's rate. The engine drops whatever runs past its
+    // input queue's 2,048 packets in one control tick, faithfully -- that is what the module does
+    // to a host that dumps a burst on it -- but a host is not what a player is standing in for. A
+    // wire is, and at 31,250 baud `darkness3.mid`'s 660-byte opening takes twenty-one control
+    // ticks to arrive and hardware drops none of it. Handing it over in one call is this program's
+    // choice, not the file's; upstream measured the difference at 2.31 dB, because without this
+    // the parts keep the bulk dump's programs instead of taking the file's own.
+    player_->set_spread_bursts(true);
 }
 
 void Session::restore_parts(const std::vector<std::array<int, 7>>& previous)

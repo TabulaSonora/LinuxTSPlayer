@@ -89,6 +89,10 @@ public:
     [[nodiscard]] TSEngineSettings settings() const;
     void set_looping(bool looping);
     void seek(std::int64_t frame);
+
+    /// Where "back to the start" is for the loaded song -- see `Session::start_frame`. Zero when
+    /// there is no song, which is what a caller restarting nothing wants anyway.
+    [[nodiscard]] std::int64_t start_frame() const;
     void panic();
 
     void set_paused(bool paused);

@@ -211,9 +211,10 @@ static void ts_mpris_player_method(GDBusConnection*, const char*, const char*, c
     } else if (g_strcmp0(method, "PlayPause") == 0) {
         ts_player_model_toggle_playing(self->model);
     } else if (g_strcmp0(method, "Stop") == 0) {
-        // No stopped state of its own: pausing at the start is what stop means here.
+        // No stopped state of its own: pausing at the start is what stop means here -- and "the
+        // start" is the song's first note, the same place Play on a finished song goes.
         ts_player_model_pause(self->model);
-        ts_player_model_seek(self->model, 0.0);
+        ts_player_model_restart(self->model);
     } else if (g_strcmp0(method, "Seek") == 0) {
         gint64 offset = 0;
         g_variant_get(parameters, "(x)", &offset);
